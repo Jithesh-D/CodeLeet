@@ -1,0 +1,164 @@
+import { motion } from "framer-motion";
+import { format, parseISO } from "date-fns";
+import { useMemo, useState } from "react";
+import { FiArrowUpRight, FiEdit3 } from "react-icons/fi";
+import DayModal from "../components/DayModal/DayModal";
+import YearHeatmap from "../components/Heatmap/YearHeatmap";
+import StatsCard from "../components/StatsCard/StatsCard";
+import TrendCard from "../components/TrendCard/TrendCard";
+import useDailyEntries from "../hooks/useDailyEntries";
+import { getMetricSummary, getRecentEntries } from "../utils/analytics";
+import { getStreakMeta } from "../utils/streak";
+import { createEmptyEntry, getDateKey } from "../utils/storage";
+
+function Dashboard() {
+  const { entries, getEntryByDate, saveEntry } = useDailyEntries();
+  const [isModalOpen, setModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(getDateKey());
+
+  const selectedEntry = useMemo(
+    () => getEntryByDate(selectedDate) ?? createEmptyEntry(selectedDate),
+    [getEntryByDate, selectedDate],
+  );
+
+  const streakMeta = useMemo(() => getStreakMeta(entries), [entries]);
+  const metricSummary = useMemo(() => getMetricSummary(entries), [entries]);
+  const recentEntries = useMemo(
+    () => getRecentEntries(entries, 8).reverse(),
+    [entries],
+  );
+
+  const todayDate = getDateKey();
+  const hasTodayEntry = entries.some((entry) => entry.date === todayDate);
+
+  function openTodayModal() {
+    setSelectedDate(todayDate);
+    setModalOpen(true);
+  }
+
+  function openDateModal(date) {
+    setSelectedDate(date);
+    setModalOpen(true);
+  }
+
+  function handleSave(entry) {
+    saveEntry(entry);
+    setModalOpen(false);
+  }
+
+  return (
+    <section className="space-y-7">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
+      >
+        <div className="max-w-3xl space-y-3">
+          <p className="mono-label text-xs font-semibold uppercase text-cyan-500">
+            Dashboard
+          </p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-950 dark:text-slate-50 sm:text-5xl">
+            Minimal daily logging with premium local-first analytics.
+          </h1>
+          <p className="max-w-2xl text-[15px] leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
+            Track score, mood, study, sleep, bedtime, Instagram and habits in
+            one minute, then review your consistency over the year.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={openTodayModal}
+          className="inline-flex items-center justify-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_14px_36px_rgba(6,182,212,0.32)] transition hover:-translate-y-0.5 hover:bg-cyan-400"
+        >
+          {hasTodayEntry ? "Edit today's log" : "Start today's log"}
+          <FiArrowUpRight className="h-4 w-4" />
+        </button>
+      </motion.div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatsCard
+          label="Current streak"
+          value={`${streakMeta.current} days`}
+          detail="Consecutive days logged"
+          accent="emerald"
+        />
+        <StatsCard
+          label="Longest streak"
+          value={`${streakMeta.longest} days`}
+          detail="Best run so far"
+          accent="amber"
+        />
+        <StatsCard
+          label="Average score"
+          value={`${metricSummary.avgScore}/10`}
+          detail="Across all entries"
+        />
+        <StatsCard
+          label="Average sleep"
+          value={`${metricSummary.avgSleepHours}h`}
+          detail="Nightly average"
+          accent="rose"
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+        <YearHeatmap entries={entries} onSelectDate={openDateModal} />
+
+        <TrendCard
+          title="Recent logs"
+          subtitle="Most recent entries"
+          rightSlot={
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+              {entries.length} total
+            </span>
+          }
+        >
+          {recentEntries.length ? (
+            <div className="space-y-2">
+              {recentEntries.map((entry) => (
+                <button
+                  key={entry.date}
+                  type="button"
+                  onClick={() => openDateModal(entry.date)}
+                  className="flex w-full items-center justify-between rounded-2xl border border-slate-200/90 bg-white/80 px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300/60 hover:bg-cyan-50/70 dark:border-white/10 dark:bg-white/5 dark:hover:bg-cyan-500/10"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                      {format(parseISO(entry.date), "EEE, MMM d")}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {entry.mood} · {entry.studyHours}h study ·{" "}
+                      {entry.sleepHours}h sleep
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="rounded-full border border-cyan-300/40 bg-cyan-500/10 px-2.5 py-1 text-xs font-semibold text-cyan-600 dark:text-cyan-300">
+                      {entry.score}/10
+                    </span>
+                    <FiEdit3 className="h-4 w-4 text-slate-400" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+              No logs yet. Start with today's entry.
+            </p>
+          )}
+        </TrendCard>
+      </div>
+
+      <DayModal
+        key={selectedDate}
+        isOpen={isModalOpen}
+        initialEntry={selectedEntry}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSave}
+      />
+    </section>
+  );
+}
+
+export default Dashboard;
