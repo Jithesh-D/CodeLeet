@@ -1,7 +1,5 @@
 import { useMemo } from "react";
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
   Line,
   LineChart,
@@ -106,80 +104,16 @@ function Analytics() {
           </div>
         </TrendCard>
 
-        <TrendCard title="Study vs sleep" subtitle="Daily hours">
+        <TrendCard title="Weekly score average" subtitle="Week-over-week quality">
           <div className="h-72 rounded-2xl border border-slate-200/80 bg-white/70 p-2 dark:border-white/10 dark:bg-white/5">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dailySeries}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="currentColor"
-                  opacity={0.15}
-                />
-                <XAxis dataKey="day" tick={{ fontSize: 12 }} minTickGap={28} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Bar
-                  dataKey="studyHours"
-                  fill="#10b981"
-                  radius={[6, 6, 0, 0]}
-                />
-                <Bar
-                  dataKey="sleepHours"
-                  fill="#f59e0b"
-                  radius={[6, 6, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </TrendCard>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <TrendCard title="Instagram minutes" subtitle="Daily time spent">
-          <div className="h-64 rounded-2xl border border-slate-200/80 bg-white/70 p-2 dark:border-white/10 dark:bg-white/5">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={dailySeries}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="currentColor"
-                  opacity={0.15}
-                />
-                <XAxis dataKey="day" tick={{ fontSize: 12 }} minTickGap={28} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="instagramMinutes"
-                  stroke="#fb7185"
-                  strokeWidth={2.4}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </TrendCard>
-
-        <TrendCard
-          title="Weekly score average"
-          subtitle="Week-over-week quality"
-        >
-          <div className="h-64 rounded-2xl border border-slate-200/80 bg-white/70 p-2 dark:border-white/10 dark:bg-white/5">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyScoreSeries}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="currentColor"
-                  opacity={0.15}
-                />
+              <LineChart data={weeklyScoreSeries}>
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.15} />
                 <XAxis dataKey="week" tick={{ fontSize: 12 }} minTickGap={18} />
                 <YAxis domain={[0, 10]} tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Bar
-                  dataKey="averageScore"
-                  fill="#06b6d4"
-                  radius={[6, 6, 0, 0]}
-                />
-              </BarChart>
+                <Line type="monotone" dataKey="averageScore" stroke="#06b6d4" strokeWidth={2.5} dot={false} />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </TrendCard>

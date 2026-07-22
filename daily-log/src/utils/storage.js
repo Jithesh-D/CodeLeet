@@ -35,10 +35,28 @@ export function createEmptyEntry(dateKey = getDateKey()) {
     sleepHours: 0,
     bedtime: "",
     instagramMinutes: 0,
+    dsaQuestions: [],
     habits: [],
     notes: "",
     updatedAt: "",
   };
+}
+
+function normalizeDsaQuestions(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((question) => ({
+      difficulty: ["Easy", "Medium", "Hard"].includes(question?.difficulty)
+        ? question.difficulty
+        : "Easy",
+      solved: Boolean(question?.solved),
+      bruteForce: Boolean(question?.bruteForce),
+      note: typeof question?.note === "string" ? question.note.slice(0, 20) : "",
+      timeMinutes: Math.max(0, parseNumber(question?.timeMinutes, 0)),
+    }));
 }
 
 function parseNumber(value, fallback = 0) {
@@ -64,6 +82,7 @@ export function normalizeEntry(
       entry.instagramMinutes,
       baseEntry.instagramMinutes,
     ),
+    dsaQuestions: normalizeDsaQuestions(entry.dsaQuestions),
     habits: Array.isArray(entry.habits) ? entry.habits.filter(Boolean) : [],
     notes: entry.notes ?? "",
     updatedAt: entry.updatedAt || new Date().toISOString(),
@@ -81,6 +100,7 @@ export function createFormState(entry = createEmptyEntry()) {
     sleepHours: String(normalizedEntry.sleepHours || ""),
     bedtime: normalizedEntry.bedtime,
     instagramMinutes: String(normalizedEntry.instagramMinutes || ""),
+    dsaQuestions: normalizedEntry.dsaQuestions,
     habits: normalizedEntry.habits,
     notes: normalizedEntry.notes,
   };

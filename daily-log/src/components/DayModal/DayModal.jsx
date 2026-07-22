@@ -51,6 +51,40 @@ function DayModal({ isOpen, initialEntry, onClose, onSave }) {
     });
   }
 
+  function addDsaQuestion(difficulty) {
+    setFormState((currentState) => ({
+      ...currentState,
+      dsaQuestions: [
+        ...currentState.dsaQuestions,
+        {
+          difficulty,
+          solved: false,
+          bruteForce: false,
+          note: "",
+          timeMinutes: "",
+        },
+      ],
+    }));
+  }
+
+  function updateDsaQuestion(index, field, value) {
+    setFormState((currentState) => ({
+      ...currentState,
+      dsaQuestions: currentState.dsaQuestions.map((question, questionIndex) =>
+        questionIndex === index ? { ...question, [field]: value } : question,
+      ),
+    }));
+  }
+
+  function removeDsaQuestion(index) {
+    setFormState((currentState) => ({
+      ...currentState,
+      dsaQuestions: currentState.dsaQuestions.filter(
+        (_, questionIndex) => questionIndex !== index,
+      ),
+    }));
+  }
+
   function handleSubmit(event) {
     event.preventDefault();
 
@@ -61,6 +95,10 @@ function DayModal({ isOpen, initialEntry, onClose, onSave }) {
         studyHours: Number(formState.studyHours || 0),
         sleepHours: Number(formState.sleepHours || 0),
         instagramMinutes: Number(formState.instagramMinutes || 0),
+        dsaQuestions: formState.dsaQuestions.map((question) => ({
+          ...question,
+          timeMinutes: Number(question.timeMinutes || 0),
+        })),
         updatedAt: new Date().toISOString(),
       }),
     );
@@ -182,7 +220,7 @@ function DayModal({ isOpen, initialEntry, onClose, onSave }) {
                     </label>
 
                     <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-                      <span>Instagram minutes</span>
+                      <span>Youtube minutes</span>
                       <input
                         type="number"
                         min="0"
@@ -195,6 +233,164 @@ function DayModal({ isOpen, initialEntry, onClose, onSave }) {
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 dark:border-white/10 dark:bg-white/5 dark:text-slate-50"
                       />
                     </label>
+                  </div>
+
+                  <div className="rounded-[1.5rem] border border-slate-200 p-4 dark:border-white/10">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                          DSA questions solved
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          Add questions by difficulty, then mark each one
+                          solved.
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        {["Easy", "Medium", "Hard"].map((difficulty) => (
+                          <button
+                            key={difficulty}
+                            type="button"
+                            onClick={() => addDsaQuestion(difficulty)}
+                            className="rounded-full border border-cyan-300/50 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-500 hover:text-white dark:text-cyan-300"
+                          >
+                            + {difficulty}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {formState.dsaQuestions.length ? (
+                      <div className="mt-4 space-y-3">
+                        {formState.dsaQuestions.map((question, index) => (
+                          <div
+                            key={`${question.difficulty}-${index}`}
+                            className="rounded-2xl bg-slate-50 p-3 dark:bg-white/5"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <span
+                                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                  question.difficulty === "Easy"
+                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
+                                    : question.difficulty === "Medium"
+                                      ? "bg-amber-500/10 text-amber-600 dark:text-amber-300"
+                                      : "bg-rose-500/10 text-rose-600 dark:text-rose-300"
+                                }`}
+                              >
+                                {question.difficulty} #
+                                {
+                                  formState.dsaQuestions.filter(
+                                    (item, itemIndex) =>
+                                      item.difficulty === question.difficulty &&
+                                      itemIndex <= index,
+                                  ).length
+                                }
+                              </span>
+                              <div className="flex items-center gap-3">
+                                <label className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+                                  <input
+                                    type="checkbox"
+                                    checked={question.solved}
+                                    onChange={(event) =>
+                                      updateDsaQuestion(
+                                        index,
+                                        "solved",
+                                        event.target.checked,
+                                      )
+                                    }
+                                    className="h-4 w-4 rounded border-slate-300 text-cyan-500 focus:ring-cyan-500"
+                                  />
+                                  Solved
+                                </label>
+                                <label className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+                                  <input
+                                    type="checkbox"
+                                    checked={!question.solved}
+                                    onChange={(event) =>
+                                      updateDsaQuestion(
+                                        index,
+                                        "solved",
+                                        !event.target.checked,
+                                      )
+                                    }
+                                    className="h-4 w-4 rounded border-slate-300 text-cyan-500 focus:ring-cyan-500"
+                                  />
+                                  Unsolved
+                                </label>
+                                <label className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+                                  <input
+                                    type="checkbox"
+                                    checked={question.bruteForce}
+                                    onChange={(event) =>
+                                      updateDsaQuestion(
+                                        index,
+                                        "bruteForce",
+                                        event.target.checked,
+                                      )
+                                    }
+                                    className="h-4 w-4 rounded border-slate-300 text-cyan-500 focus:ring-cyan-500"
+                                  />
+                                  Brute force
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => removeDsaQuestion(index)}
+                                  className="text-xs font-medium text-slate-400 transition hover:text-rose-500"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                            {question.solved ? (
+                              <label className="mt-3 block space-y-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
+                                <span>Time taken (minutes)</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="1"
+                                  value={question.timeMinutes}
+                                  onChange={(event) =>
+                                    updateDsaQuestion(
+                                      index,
+                                      "timeMinutes",
+                                      event.target.value,
+                                    )
+                                  }
+                                  placeholder="e.g. 25"
+                                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 dark:border-white/10 dark:bg-slate-950 dark:text-slate-50"
+                                />
+                              </label>
+                            ) : null}
+                            <label className="mt-3 block space-y-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
+                              <span>
+                                Note{" "}
+                                <span className="font-normal text-slate-400">
+                                  ({question.note.length}/20)
+                                </span>
+                              </span>
+                              <input
+                                type="text"
+                                maxLength="20"
+                                value={question.note}
+                                onChange={(event) =>
+                                  updateDsaQuestion(
+                                    index,
+                                    "note",
+                                    event.target.value,
+                                  )
+                                }
+                                placeholder="Short question note"
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 dark:border-white/10 dark:bg-slate-950 dark:text-slate-50"
+                              />
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
+                        No DSA questions added for this day.
+                      </p>
+                    )}
                   </div>
                 </div>
 
