@@ -1,11 +1,8 @@
 import { endOfYear, format, parseISO, startOfYear } from "date-fns";
+import { getDailyProgress, getSolvedDsaCount } from "./storage";
 
-function toIntensity(score = 0) {
-  if (score <= 0) return 0;
-  if (score <= 3) return 1;
-  if (score <= 5) return 2;
-  if (score <= 7) return 3;
-  return 4;
+export function getHeatmapLevel(entry = {}) {
+  return getDailyProgress(entry.dsaQuestions, entry.essentialsStudy);
 }
 
 export function getYearBounds(year = new Date().getFullYear()) {
@@ -25,9 +22,11 @@ export function buildHeatmapValues(
     .filter((entry) => Number(entry.date.slice(0, 4)) === Number(year))
     .map((entry) => ({
       date: entry.date,
-      count: toIntensity(entry.score),
+      count: getHeatmapLevel(entry),
       score: entry.score,
       mood: entry.mood,
+      solvedDsaCount: getSolvedDsaCount(entry.dsaQuestions),
+      essentialsStudy: entry.essentialsStudy ?? [],
     }));
 }
 

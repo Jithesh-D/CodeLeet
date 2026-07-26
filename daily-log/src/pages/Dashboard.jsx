@@ -18,6 +18,7 @@ import TrendCard from "../components/TrendCard/TrendCard";
 import useDailyEntries from "../hooks/useDailyEntries";
 import {
   buildDailySeries,
+  buildWeeklyScoreSeries,
   getMetricSummary,
   getRecentEntries,
 } from "../utils/analytics";
@@ -31,9 +32,12 @@ function DailyValueTooltip({ active, payload, label, unit }) {
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-lg dark:border-white/10 dark:bg-slate-900">
-      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+        {label}
+      </p>
       <p className="mt-1 text-sm font-bold text-slate-900 dark:text-slate-50">
-        {payload[0].value}{unit}
+        {payload[0].value}
+        {unit}
       </p>
     </div>
   );
@@ -56,7 +60,11 @@ function Dashboard() {
     [entries],
   );
   const dashboardSeries = useMemo(
-    () => buildDailySeries(getRecentEntries(entries, 14)),
+    () => buildDailySeries(entries),
+    [entries],
+  );
+  const weeklyScoreSeries = useMemo(
+    () => buildWeeklyScoreSeries(entries),
     [entries],
   );
 
@@ -90,13 +98,10 @@ function Dashboard() {
           <p className="mono-label text-xs font-semibold uppercase text-cyan-500">
             Dashboard
           </p>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-950 dark:text-slate-50 sm:text-5xl">
-            Minimal daily logging with premium local-first analytics.
-          </h1>
-          <p className="max-w-2xl text-[15px] leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
-            Track score, mood, study, sleep, bedtime, Instagram and habits in
-            one minute, then review your consistency over the year.
-          </p>
+          <h3 className="text-3xl font-extrabold tracking-tight text-slate-950 dark:text-slate-50 sm:text-3xl">
+            Placement Prep Daily log & Analytics
+          </h3>
+          <p className="max-w-2xl text-[15px] leading-7 text-slate-600 dark:text-slate-300 sm:text-base"></p>
         </div>
 
         <button
@@ -182,21 +187,35 @@ function Dashboard() {
         </TrendCard>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-4 xl:grid-cols-4">
         <TrendCard
           title="Study rhythm"
-          subtitle="Study and sleep hours across your last 14 logs"
+          subtitle="Study and sleep hours across all logged days"
           rightSlot={
             <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-300">
               {metricSummary.avgStudyHours}h avg study
             </span>
           }
         >
-          <div className="h-64 rounded-2xl border border-slate-200/80 bg-gradient-to-b from-emerald-50/80 to-white p-2 dark:border-white/10 dark:from-emerald-500/10 dark:to-white/5">
+          <div className="h-40 rounded-2xl border border-slate-200/80 bg-gradient-to-b from-emerald-50/80 to-white p-2 dark:border-white/10 dark:from-emerald-500/10 dark:to-white/5">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={dashboardSeries} margin={{ top: 14, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
-                <XAxis dataKey="day" tick={{ fontSize: 11 }} minTickGap={24} axisLine={{ stroke: "currentColor", opacity: 0.2 }} tickLine={false} />
+              <LineChart
+                data={dashboardSeries}
+                margin={{ top: 14, right: 8, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid
+                  vertical={false}
+                  strokeDasharray="3 3"
+                  stroke="currentColor"
+                  opacity={0.1}
+                />
+                <XAxis
+                  dataKey="day"
+                  tick={{ fontSize: 11 }}
+                  minTickGap={24}
+                  axisLine={{ stroke: "currentColor", opacity: 0.2 }}
+                  tickLine={false}
+                />
                 <YAxis
                   domain={[0, 10]}
                   ticks={[2, 4, 6, 8, 10]}
@@ -205,8 +224,28 @@ function Dashboard() {
                   tickLine={false}
                   width={28}
                 />
-                <Tooltip content={<DailyValueTooltip unit="h studied" />} cursor={{ stroke: "#10b981", strokeDasharray: "4 4", opacity: 0.45 }} />
-                <Line type="monotone" dataKey="studyHours" name="Study time" stroke="#10b981" strokeWidth={3} dot={false} activeDot={{ r: 5, fill: "#ffffff", stroke: "#10b981", strokeWidth: 3 }} />
+                <Tooltip
+                  content={<DailyValueTooltip unit="h studied" />}
+                  cursor={{
+                    stroke: "#10b981",
+                    strokeDasharray: "4 4",
+                    opacity: 0.45,
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="studyHours"
+                  name="Study time"
+                  stroke="#10b981"
+                  strokeWidth={3}
+                  dot={false}
+                  activeDot={{
+                    r: 5,
+                    fill: "#ffffff",
+                    stroke: "#10b981",
+                    strokeWidth: 3,
+                  }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -221,11 +260,25 @@ function Dashboard() {
             </span>
           }
         >
-          <div className="h-64 rounded-2xl border border-slate-200/80 bg-gradient-to-b from-rose-50/80 to-white p-2 dark:border-white/10 dark:from-rose-500/10 dark:to-white/5">
+          <div className="h-40 rounded-2xl border border-slate-200/80 bg-gradient-to-b from-rose-50/80 to-white p-2 dark:border-white/10 dark:from-rose-500/10 dark:to-white/5">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={dashboardSeries} margin={{ top: 14, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
-                <XAxis dataKey="day" tick={{ fontSize: 11 }} minTickGap={24} axisLine={{ stroke: "currentColor", opacity: 0.2 }} tickLine={false} />
+              <LineChart
+                data={dashboardSeries}
+                margin={{ top: 14, right: 8, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid
+                  vertical={false}
+                  strokeDasharray="3 3"
+                  stroke="currentColor"
+                  opacity={0.1}
+                />
+                <XAxis
+                  dataKey="day"
+                  tick={{ fontSize: 11 }}
+                  minTickGap={24}
+                  axisLine={{ stroke: "currentColor", opacity: 0.2 }}
+                  tickLine={false}
+                />
                 <YAxis
                   domain={[0, 300]}
                   ticks={[30, 60, 90, 120, 180, 300]}
@@ -234,8 +287,72 @@ function Dashboard() {
                   tickLine={false}
                   width={32}
                 />
-                <Tooltip content={<DailyValueTooltip unit=" min" />} cursor={{ stroke: "#fb7185", strokeDasharray: "4 4", opacity: 0.45 }} />
-                <Line type="monotone" dataKey="instagramMinutes" name="Instagram minutes" stroke="#fb7185" strokeWidth={3} dot={false} activeDot={{ r: 5, fill: "#ffffff", stroke: "#fb7185", strokeWidth: 3 }} />
+                <Tooltip
+                  content={<DailyValueTooltip unit=" min" />}
+                  cursor={{
+                    stroke: "#fb7185",
+                    strokeDasharray: "4 4",
+                    opacity: 0.45,
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="instagramMinutes"
+                  name="Instagram minutes"
+                  stroke="#fb7185"
+                  strokeWidth={3}
+                  dot={false}
+                  activeDot={{
+                    r: 5,
+                    fill: "#ffffff",
+                    stroke: "#fb7185",
+                    strokeWidth: 3,
+                  }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </TrendCard>
+
+        <TrendCard
+          title="Weekly score"
+          subtitle="Your weekly average across all logs"
+          rightSlot={
+            <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-600 dark:text-cyan-300">
+              {metricSummary.avgScore}/10 avg
+            </span>
+          }
+        >
+          <div className="h-40 rounded-2xl border border-slate-200/80 bg-gradient-to-b from-cyan-50/80 to-white p-2 dark:border-white/10 dark:from-cyan-500/10 dark:to-white/5">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={weeklyScoreSeries} margin={{ top: 14, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
+                <XAxis dataKey="week" tick={{ fontSize: 11 }} minTickGap={22} axisLine={{ stroke: "currentColor", opacity: 0.2 }} tickLine={false} />
+                <YAxis domain={[0, 10]} ticks={[2, 4, 6, 8, 10]} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip content={<DailyValueTooltip unit="/10" />} cursor={{ stroke: "#06b6d4", strokeDasharray: "4 4", opacity: 0.45 }} />
+                <Line type="monotone" dataKey="averageScore" name="Weekly score" stroke="#06b6d4" strokeWidth={3} dot={false} activeDot={{ r: 5, fill: "#ffffff", stroke: "#06b6d4", strokeWidth: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </TrendCard>
+
+        <TrendCard
+          title="Score trend"
+          subtitle="Daily score across all logs"
+          rightSlot={
+            <span className="rounded-full bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-600 dark:text-violet-300">
+              {metricSummary.avgScore}/10 avg
+            </span>
+          }
+        >
+          <div className="h-40 rounded-2xl border border-slate-200/80 bg-gradient-to-b from-violet-50/80 to-white p-2 dark:border-white/10 dark:from-violet-500/10 dark:to-white/5">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={dashboardSeries} margin={{ top: 14, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
+                <XAxis dataKey="day" tick={{ fontSize: 11 }} minTickGap={22} axisLine={{ stroke: "currentColor", opacity: 0.2 }} tickLine={false} />
+                <YAxis domain={[0, 10]} ticks={[2, 4, 6, 8, 10]} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip content={<DailyValueTooltip unit="/10" />} cursor={{ stroke: "#8b5cf6", strokeDasharray: "4 4", opacity: 0.45 }} />
+                <Line type="monotone" dataKey="score" name="Daily score" stroke="#8b5cf6" strokeWidth={3} dot={false} activeDot={{ r: 5, fill: "#ffffff", stroke: "#8b5cf6", strokeWidth: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>

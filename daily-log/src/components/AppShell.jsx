@@ -1,12 +1,12 @@
 import { useEffect } from "react";
-import { FiBarChart2, FiCalendar, FiHome, FiSettings } from "react-icons/fi";
+import { FiActivity, FiBarChart2, FiHome, FiSettings } from "react-icons/fi";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import ThemeToggle from "./ThemeToggle";
 import useLocalStorage from "../hooks/useLocalStorage";
 import { STORAGE_KEYS } from "../utils/storage";
 
 const navigation = [
-  { to: "/", label: "Dashboard", icon: FiHome, end: true },
+  { to: "/", label: "Overview", icon: FiHome, end: true },
   { to: "/analytics", label: "Analytics", icon: FiBarChart2 },
   { to: "/settings", label: "Settings", icon: FiSettings },
 ];
@@ -19,45 +19,39 @@ function AppShell() {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
-  const shellTone =
-    theme === "dark"
-      ? "border-slate-600/30 bg-slate-950/55 text-slate-100 shadow-[0_28px_100px_rgba(2,6,23,0.45)]"
-      : "border-slate-200/85 bg-white/62 text-slate-950 shadow-[0_28px_100px_rgba(15,23,42,0.1)]";
-
-  const panelTone =
-    theme === "dark"
-      ? "border-slate-500/25 bg-white/[0.04] text-slate-200"
-      : "border-slate-200/90 bg-white/85 text-slate-900";
-
-  const mobileNavTone =
-    theme === "dark"
-      ? "border-slate-500/25 bg-slate-950/85 text-slate-200"
-      : "border-slate-200/85 bg-white/80 text-slate-700";
+  const pageTitle =
+    navigation.find((item) => item.to === location.pathname)?.label ??
+    "Daily Log";
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_4%,rgba(56,189,248,0.13),transparent_24%),radial-gradient(circle_at_92%_0%,rgba(16,185,129,0.1),transparent_26%)]" />
-      <div className="pointer-events-none absolute -top-32 left-1/2 h-64 w-[52rem] -translate-x-1/2 rounded-full bg-white/40 blur-3xl dark:bg-cyan-500/10" />
+      <div className="pointer-events-none absolute inset-0 aurora-bg" />
+      <div className="pointer-events-none absolute left-[7%] top-[-9rem] h-80 w-80 rounded-full bg-cyan-400/15 blur-[110px] dark:bg-cyan-400/10" />
+      <div className="pointer-events-none absolute right-[-5rem] top-[16rem] h-96 w-96 rounded-full bg-violet-400/10 blur-[130px] dark:bg-blue-500/10" />
 
-      <div className="relative mx-auto flex min-h-screen max-w-[1500px]">
-        <aside
-          className={`hidden w-[18.5rem] shrink-0 border-r backdrop-blur-2xl lg:flex lg:flex-col ${shellTone}`}
-        >
-          <div className="flex items-center gap-3 px-6 py-6">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-500/25 bg-cyan-500/10 text-sm font-semibold tracking-[0.3em] text-cyan-500">
-              DL
-            </div>
-            <div>
-              <p className="mono-label text-xs font-medium text-slate-400 uppercase">
-                Daily Log
-              </p>
-              <p className="text-xs text-slate-500">
-                Personal analytics, locally stored
-              </p>
-            </div>
-          </div>
+      <div className="relative mx-auto min-h-screen max-w-[1680px] px-3 pb-8 pt-3 sm:px-5 sm:pt-5 lg:px-8">
+        <header className="glass-nav sticky top-3 z-30 mx-auto flex max-w-[1600px] items-center justify-between gap-3 rounded-[1.4rem] px-3 py-2.5 sm:px-4">
+          <NavLink
+            to="/"
+            className="group flex shrink-0 items-center gap-3 rounded-xl px-1 py-1"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 text-white shadow-[0_8px_22px_rgba(37,99,235,0.35)]">
+              <FiActivity className="h-4 w-4" />
+            </span>
+            <span className="hidden leading-tight sm:block">
+              <span className="block text-sm font-extrabold tracking-tight text-slate-950 dark:text-white">
+                Placement Log
+              </span>
+              <span className="mono-label block mt-0.5 text-[9px] font-semibold uppercase text-slate-400">
+                Build deliberately
+              </span>
+            </span>
+          </NavLink>
 
-          <nav className="flex flex-1 flex-col gap-2 px-4">
+          <nav
+            className="flex items-center gap-1 rounded-xl bg-slate-900/[0.035] p-1 dark:bg-white/[0.055]"
+            aria-label="Primary navigation"
+          >
             {navigation.map(({ to, label, icon: Icon, end }) => (
               <NavLink
                 key={to}
@@ -65,96 +59,39 @@ function AppShell() {
                 end={end}
                 className={({ isActive }) =>
                   [
-                    "group flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition-all duration-200",
-                    panelTone,
+                    "flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold transition-all sm:px-3 sm:text-sm",
                     isActive
-                      ? "border-cyan-400/45 bg-cyan-500/12 text-cyan-500 shadow-[0_8px_30px_rgba(6,182,212,0.16)]"
-                      : "hover:-translate-y-0.5 hover:border-cyan-400/30 hover:bg-cyan-500/7",
+                      ? "bg-white text-slate-950 shadow-[0_3px_13px_rgba(15,23,42,0.10)] dark:bg-white/[0.13] dark:text-white"
+                      : "text-slate-500 hover:bg-white/55 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-100",
                   ].join(" ")
                 }
               >
-                <Icon className="h-4 w-4 transition group-hover:scale-110" />
-                <span>{label}</span>
+                <Icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{label}</span>
               </NavLink>
             ))}
           </nav>
 
-          <div className="space-y-3 px-4 py-6">
-            <div className={`surface-card p-4 ${panelTone}`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="mono-label text-xs uppercase text-slate-500">
-                    Storage
-                  </p>
-                  <p className="mt-2 text-sm font-medium">Local only</p>
-                </div>
-                <FiCalendar className="h-5 w-5 text-cyan-500" />
-              </div>
-              <p className="mt-3 text-sm leading-6 text-slate-500">
-                Every entry stays in the browser. No backend, no sync layer.
-              </p>
-            </div>
-
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="hidden rounded-full border border-emerald-500/15 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-300 lg:inline">
+              Local-first
+            </span>
             <ThemeToggle
               theme={theme}
               onToggle={() => setTheme(theme === "dark" ? "light" : "dark")}
             />
           </div>
-        </aside>
+        </header>
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header
-            className={`sticky top-0 z-30 border-b px-4 py-4 backdrop-blur-xl sm:px-6 lg:hidden ${mobileNavTone}`}
-          >
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="mono-label text-xs font-semibold uppercase text-cyan-500">
-                  Daily Log
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {location.pathname === "/"
-                    ? "Dashboard"
-                    : location.pathname.slice(1)}
-                </p>
-              </div>
-
-              <ThemeToggle
-                theme={theme}
-                onToggle={() => setTheme(theme === "dark" ? "light" : "dark")}
-              />
-            </div>
-
-            <nav className="mt-4 flex gap-2 overflow-x-auto pb-1">
-              {navigation.map(({ to, label, icon: Icon, end }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  end={end}
-                  className={({ isActive }) =>
-                    [
-                      "flex min-w-max items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all",
-                      isActive
-                        ? "border-cyan-400/45 bg-cyan-500/12 text-cyan-500"
-                        : "border-transparent bg-white/5 text-slate-500 hover:bg-white/45 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white",
-                    ].join(" ")
-                  }
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{label}</span>
-                </NavLink>
-              ))}
-            </nav>
-          </header>
-
-          <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-9">
-            <div
-              key={location.pathname}
-              className="rounded-[2rem] border border-white/5 bg-transparent"
-            >
-              <Outlet />
-            </div>
-          </main>
-        </div>
+        <main className="mx-auto max-w-[1600px] py-7 sm:py-9 lg:py-11">
+          <div className="mb-6 flex items-center gap-3 px-1 sm:hidden">
+            <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.9)]" />
+            <p className="mono-label text-[10px] font-semibold uppercase text-slate-400">
+              {pageTitle}
+            </p>
+          </div>
+          <Outlet />
+        </main>
       </div>
     </div>
   );

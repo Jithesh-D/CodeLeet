@@ -22,6 +22,14 @@ export const HABIT_OPTIONS = [
   "Walk",
 ];
 
+export const ESSENTIAL_STUDY_OPTIONS = [
+  "OS",
+  "System design",
+  "CN",
+  "DBMS",
+  "Aptitude",
+];
+
 export function getDateKey(date = new Date()) {
   return format(date, "yyyy-MM-dd");
 }
@@ -29,17 +37,46 @@ export function getDateKey(date = new Date()) {
 export function createEmptyEntry(dateKey = getDateKey()) {
   return {
     date: dateKey,
-    score: 5,
+    score: 0,
     mood: "Balanced",
     studyHours: 0,
     sleepHours: 0,
     bedtime: "",
     instagramMinutes: 0,
     dsaQuestions: [],
+    essentialsStudy: [],
     habits: [],
     notes: "",
     updatedAt: "",
   };
+}
+
+export function getSolvedDsaCount(questions = []) {
+  return Array.isArray(questions)
+    ? questions.filter((question) => question.solved).length
+    : 0;
+}
+
+export function getDailyProgress(dsaQuestions = [], essentialsStudy = []) {
+  const solvedCount = getSolvedDsaCount(dsaQuestions);
+  const studiedEssential = Array.isArray(essentialsStudy) && essentialsStudy.length > 0;
+
+  if (solvedCount === 0) return "zero";
+  if (studiedEssential) {
+    if (solvedCount === 1) return "blue";
+    if (solvedCount === 2) return "green";
+    return "gold";
+  }
+  if (solvedCount === 1) return "red";
+  if (solvedCount === 2) return "blue";
+  if (solvedCount === 3) return "green";
+  return "gold";
+}
+
+export function getCalculatedScore(dsaQuestions = [], essentialsStudy = []) {
+  const progress = getDailyProgress(dsaQuestions, essentialsStudy);
+
+  return { zero: 0, red: 5, blue: 7, green: 9, gold: 10 }[progress];
 }
 
 function normalizeDsaQuestions(value) {
@@ -70,19 +107,24 @@ export function normalizeEntry(
   dateKey = entry.date ?? getDateKey(),
 ) {
   const baseEntry = createEmptyEntry(dateKey);
+  const dsaQuestions = normalizeDsaQuestions(entry.dsaQuestions);
+  const essentialsStudy = Array.isArray(entry.essentialsStudy)
+    ? entry.essentialsStudy.filter((topic) => ESSENTIAL_STUDY_OPTIONS.includes(topic))
+    : [];
 
   return {
     ...baseEntry,
     ...entry,
     date: dateKey,
-    score: parseNumber(entry.score, baseEntry.score),
+    score: getCalculatedScore(dsaQuestions, essentialsStudy),
     studyHours: parseNumber(entry.studyHours, baseEntry.studyHours),
     sleepHours: parseNumber(entry.sleepHours, baseEntry.sleepHours),
     instagramMinutes: parseNumber(
       entry.instagramMinutes,
       baseEntry.instagramMinutes,
     ),
-    dsaQuestions: normalizeDsaQuestions(entry.dsaQuestions),
+    dsaQuestions,
+    essentialsStudy,
     habits: Array.isArray(entry.habits) ? entry.habits.filter(Boolean) : [],
     notes: entry.notes ?? "",
     updatedAt: entry.updatedAt || new Date().toISOString(),
@@ -94,13 +136,13 @@ export function createFormState(entry = createEmptyEntry()) {
 
   return {
     date: normalizedEntry.date,
-    score: String(normalizedEntry.score),
     mood: normalizedEntry.mood,
     studyHours: String(normalizedEntry.studyHours || ""),
     sleepHours: String(normalizedEntry.sleepHours || ""),
     bedtime: normalizedEntry.bedtime,
     instagramMinutes: String(normalizedEntry.instagramMinutes || ""),
     dsaQuestions: normalizedEntry.dsaQuestions,
+    essentialsStudy: normalizedEntry.essentialsStudy,
     habits: normalizedEntry.habits,
     notes: normalizedEntry.notes,
   };

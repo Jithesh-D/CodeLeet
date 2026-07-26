@@ -3,12 +3,12 @@ import { useEffect, useState } from "react";
 import { FiX } from "react-icons/fi";
 import {
   HABIT_OPTIONS,
+  ESSENTIAL_STUDY_OPTIONS,
   MOOD_OPTIONS,
   createEmptyEntry,
   createFormState,
   normalizeEntry,
 } from "../../utils/storage";
-import ScorePicker from "../ScorePicker/ScorePicker";
 
 function DayModal({ isOpen, initialEntry, onClose, onSave }) {
   const [formState, setFormState] = useState(() =>
@@ -47,6 +47,19 @@ function DayModal({ isOpen, initialEntry, onClose, onSave }) {
         habits: hasHabit
           ? currentState.habits.filter((item) => item !== habit)
           : [...currentState.habits, habit],
+      };
+    });
+  }
+
+  function toggleEssential(topic) {
+    setFormState((currentState) => {
+      const isSelected = currentState.essentialsStudy.includes(topic);
+
+      return {
+        ...currentState,
+        essentialsStudy: isSelected
+          ? currentState.essentialsStudy.filter((item) => item !== topic)
+          : [...currentState.essentialsStudy, topic],
       };
     });
   }
@@ -91,7 +104,6 @@ function DayModal({ isOpen, initialEntry, onClose, onSave }) {
     onSave(
       normalizeEntry({
         ...formState,
-        score: Number(formState.score),
         studyHours: Number(formState.studyHours || 0),
         sleepHours: Number(formState.sleepHours || 0),
         instagramMinutes: Number(formState.instagramMinutes || 0),
@@ -149,14 +161,6 @@ function DayModal({ isOpen, initialEntry, onClose, onSave }) {
             >
               <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
                 <div className="space-y-6">
-                  <ScorePicker
-                    label="Daily score"
-                    value={Number(formState.score)}
-                    onChange={(nextScore) =>
-                      updateField("score", String(nextScore))
-                    }
-                  />
-
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
                       <span>Mood</span>
@@ -391,6 +395,36 @@ function DayModal({ isOpen, initialEntry, onClose, onSave }) {
                         No DSA questions added for this day.
                       </p>
                     )}
+                  </div>
+
+                  <div className="rounded-[1.5rem] border border-slate-200 p-4 dark:border-white/10">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                      Essential study
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      Select any topic studied today. This boosts the heatmap alongside DSA progress.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {ESSENTIAL_STUDY_OPTIONS.map((topic) => {
+                        const isSelected = formState.essentialsStudy.includes(topic);
+
+                        return (
+                          <button
+                            key={topic}
+                            type="button"
+                            onClick={() => toggleEssential(topic)}
+                            aria-pressed={isSelected}
+                            className={`rounded-full border px-3 py-2 text-sm font-medium transition-all ${
+                              isSelected
+                                ? "border-amber-400/50 bg-amber-400 text-amber-950 shadow-lg shadow-amber-400/20"
+                                : "border-slate-200 bg-slate-50 text-slate-600 hover:border-amber-300 hover:bg-amber-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-amber-400/10"
+                            }`}
+                          >
+                            {topic}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
