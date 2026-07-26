@@ -57,6 +57,10 @@ export function getSolvedDsaCount(questions = []) {
     : 0;
 }
 
+export function getTotalDsaCount(questions = []) {
+  return Array.isArray(questions) ? questions.length : 0;
+}
+
 // Easy=1, Medium=2, Hard=3 — solved=full, bruteForce=half, unsolved=0
 const DIFFICULTY_WEIGHT = { Easy: 1, Medium: 2, Hard: 3 };
 
@@ -70,9 +74,25 @@ export function getDsaWeight(questions = []) {
   }, 0);
 }
 
-// essential topics each add +1 bonus, capped at +2
-// total < 2 → red (5), < 4 → blue (7), < 7 → green (9), 7+ → gold (10)
+// Heatmap colour: based on total questions ADDED (effort) + essential bonus
+// total < 2 → red, < 4 → blue, < 7 → green, 7+ → gold
 export function getDailyProgress(dsaQuestions = [], essentialsStudy = []) {
+  const total = getTotalDsaCount(dsaQuestions);
+  const essentialBonus = Math.min(
+    Array.isArray(essentialsStudy) ? essentialsStudy.length : 0,
+    2,
+  );
+  const count = total + essentialBonus;
+
+  if (count === 0) return "zero";
+  if (count < 2) return "red";
+  if (count < 4) return "blue";
+  if (count < 7) return "green";
+  return "gold";
+}
+
+// Score: based on solved weight (quality) + essential bonus
+export function getCalculatedScore(dsaQuestions = [], essentialsStudy = []) {
   const weight = getDsaWeight(dsaQuestions);
   const essentialBonus = Math.min(
     Array.isArray(essentialsStudy) ? essentialsStudy.length : 0,
@@ -80,16 +100,11 @@ export function getDailyProgress(dsaQuestions = [], essentialsStudy = []) {
   );
   const total = weight + essentialBonus;
 
-  if (total === 0) return "zero";
-  if (total < 2) return "red";
-  if (total < 4) return "blue";
-  if (total < 7) return "green";
-  return "gold";
-}
-
-export function getCalculatedScore(dsaQuestions = [], essentialsStudy = []) {
-  const progress = getDailyProgress(dsaQuestions, essentialsStudy);
-  return { zero: 0, red: 5, blue: 7, green: 9, gold: 10 }[progress];
+  if (total === 0) return 0;
+  if (total < 2) return 5;
+  if (total < 4) return 7;
+  if (total < 7) return 9;
+  return 10;
 }
 
 function normalizeDsaQuestions(value) {
