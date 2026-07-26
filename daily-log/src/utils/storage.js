@@ -53,59 +53,64 @@ export function createEmptyEntry(dateKey = getDateKey()) {
 
 export function getSolvedDsaCount(questions = []) {
   return Array.isArray(questions)
-    ? questions.filter((question) => question.solved).length
+    ? questions.filter((q) => q.solved).length
     : 0;
 }
 
-export function getDailyProgress(dsaQuestions = [], essentialsStudy = []) {
-  const solvedCount = getSolvedDsaCount(dsaQuestions);
-  const studiedEssential = Array.isArray(essentialsStudy) && essentialsStudy.length > 0;
+// Easy=1, Medium=2, Hard=3 — solved=full, bruteForce=half, unsolved=0
+const DIFFICULTY_WEIGHT = { Easy: 1, Medium: 2, Hard: 3 };
 
-  if (solvedCount === 0) return "zero";
-  if (studiedEssential) {
-    if (solvedCount === 1) return "blue";
-    if (solvedCount === 2) return "green";
-    return "gold";
-  }
-  if (solvedCount === 1) return "red";
-  if (solvedCount === 2) return "blue";
-  if (solvedCount === 3) return "green";
+export function getDsaWeight(questions = []) {
+  if (!Array.isArray(questions)) return 0;
+  return questions.reduce((sum, q) => {
+    const base = DIFFICULTY_WEIGHT[q.difficulty] ?? 1;
+    if (q.solved) return sum + base;
+    if (q.bruteForce) return sum + base * 0.5;
+    return sum;
+  }, 0);
+}
+
+// essential topics each add +1 bonus, capped at +2
+// total < 2 → red (5), < 4 → blue (7), < 7 → green (9), 7+ → gold (10)
+export function getDailyProgress(dsaQuestions = [], essentialsStudy = []) {
+  const weight = getDsaWeight(dsaQuestions);
+  const essentialBonus = Math.min(
+    Array.isArray(essentialsStudy) ? essentialsStudy.length : 0,
+    2,
+  );
+  const total = weight + essentialBonus;
+
+  if (total === 0) return "zero";
+  if (total < 2) return "red";
+  if (total < 4) return "blue";
+  if (total < 7) return "green";
   return "gold";
 }
 
 export function getCalculatedScore(dsaQuestions = [], essentialsStudy = []) {
   const progress = getDailyProgress(dsaQuestions, essentialsStudy);
-
   return { zero: 0, red: 5, blue: 7, green: 9, gold: 10 }[progress];
 }
 
 function normalizeDsaQuestions(value) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .map((question) => ({
-      difficulty: ["Easy", "Medium", "Hard"].includes(question?.difficulty)
-        ? question.difficulty
-        : "Easy",
-      solved: Boolean(question?.solved),
-      bruteForce: Boolean(question?.bruteForce),
-      note: typeof question?.note === "string" ? question.note.slice(0, 20) : "",
-      timeMinutes: Math.max(0, parseNumber(question?.timeMinutes, 0)),
-    }));
+  if (!Array.isArray(value)) return [];
+  return value.map((question) => ({
+    difficulty: ["Easy", "Medium", "Hard"].includes(question?.difficulty)
+      ? question.difficulty
+      : "Easy",
+    solved: Boolean(question?.solved),
+    bruteForce: Boolean(question?.bruteForce),
+    note: typeof question?.note === "string" ? question.note.slice(0, 20) : "",
+    timeMinutes: Math.max(0, parseNumber(question?.timeMinutes, 0)),
+  }));
 }
 
 function parseNumber(value, fallback = 0) {
   const parsedValue = Number(value);
-
   return Number.isFinite(parsedValue) ? parsedValue : fallback;
 }
 
-export function normalizeEntry(
-  entry = {},
-  dateKey = entry.date ?? getDateKey(),
-) {
+export function normalizeEntry(entry = {}, dateKey = entry.date ?? getDateKey()) {
   const baseEntry = createEmptyEntry(dateKey);
   const dsaQuestions = normalizeDsaQuestions(entry.dsaQuestions);
   const essentialsStudy = Array.isArray(entry.essentialsStudy)
@@ -119,9 +124,9 @@ export function normalizeEntry(
     score: getCalculatedScore(dsaQuestions, essentialsStudy),
     studyHours: parseNumber(entry.studyHours, baseEntry.studyHours),
     sleepHours: parseNumber(entry.sleepHours, baseEntry.sleepHours),
-    instagramMinutes: parseNumber(
-      entry.instagramMinutes,
-      baseEntry.instagramMinutes,
+    instagramMinutes: Math.min(
+      parseNumber(entry.instagramMinutes, baseEntry.instagramMinutes),
+      600,
     ),
     dsaQuestions,
     essentialsStudy,
@@ -133,7 +138,6 @@ export function normalizeEntry(
 
 export function createFormState(entry = createEmptyEntry()) {
   const normalizedEntry = normalizeEntry(entry, entry.date);
-
   return {
     date: normalizedEntry.date,
     mood: normalizedEntry.mood,
@@ -155,15 +159,12 @@ export function sortEntriesByDate(entries = []) {
 }
 
 export function parseStoredEntries(value) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  const normalizedEntries = value
-    .map((entry) => normalizeEntry(entry, entry?.date))
-    .filter((entry) => Boolean(entry.date));
-
-  return sortEntriesByDate(normalizedEntries);
+  if (!Array.isArray(value)) return [];
+  return sortEntriesByDate(
+    value
+      .map((entry) => normalizeEntry(entry, entry?.date))
+      .filter((entry) => Boolean(entry.date)),
+  );
 }
 
 export function upsertEntry(entries = [], nextEntry = {}) {
@@ -171,7 +172,6 @@ export function upsertEntry(entries = [], nextEntry = {}) {
   const filteredEntries = entries.filter(
     (entry) => entry.date !== normalizedEntry.date,
   );
-
   return sortEntriesByDate([...filteredEntries, normalizedEntry]);
 }
 
@@ -192,6 +192,5 @@ export function importEntriesPayload(rawText = "") {
   const incomingEntries = Array.isArray(parsedValue)
     ? parsedValue
     : parsedValue?.entries;
-
   return parseStoredEntries(incomingEntries);
 }

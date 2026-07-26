@@ -1,0 +1,258 @@
+import { motion } from "framer-motion";
+import { useState } from "react";
+import {
+  eachDayOfInterval,
+  endOfMonth,
+  endOfYear,
+  format,
+  startOfMonth,
+  startOfYear,
+} from "date-fns";
+import { getHeatmapLookup } from "../../utils/heatmap";
+
+const DIFFICULTIES = ["All", "Easy", "Medium", "Hard"];
+
+const DIFF_COLORS = {
+  Easy: "text-emerald-600 dark:text-emerald-400",
+  Medium: "text-amber-600 dark:text-amber-400",
+  Hard: "text-rose-600 dark:text-rose-400",
+  All: "text-cyan-600 dark:text-cyan-400",
+};
+
+function getDsaStats(entry, difficulty) {
+  if (!entry?.dsaQuestions?.length) return { total: 0, solved: 0 };
+  const questions =
+    difficulty === "All"
+      ? entry.dsaQuestions
+      : entry.dsaQuestions.filter((q) => q.difficulty === difficulty);
+  return {
+    total: questions.length,
+    solved: questions.filter((q) => q.solved).length,
+  };
+}
+
+function getDsaCellLevel(entry, difficulty) {
+  if (!entry) return "empty";
+  const { total, solved } = getDsaStats(entry, difficulty);
+  if (total === 0) return "none";
+  const ratio = solved / total;
+  if (ratio >= 0.8) return "gold";
+  if (ratio >= 0.5) return "green";
+  if (ratio > 0) return "blue";
+  return "zero";
+}
+
+const CELL_CLASS = {
+  empty: "contribution-empty",
+  none: "dsa-cell-none",
+  zero: "contribution-zero",
+  blue: "contribution-blue",
+  green: "contribution-green",
+  gold: "contribution-gold",
+};
+
+function buildCalendarRange(date) {
+  return Array.from({ length: 12 }, (_, index) => {
+    const monthStart = startOfMonth(new Date(date.getFullYear(), index, 1));
+    const monthEnd = endOfMonth(monthStart);
+    return {
+      key: format(monthStart, "yyyy-MM"),
+      label: format(monthStart, "MMM"),
+      days: eachDayOfInterval({ start: monthStart, end: monthEnd }),
+    };
+  });
+}
+
+function DsaHeatmap({ entries, onSelectDate }) {
+  const [difficulty, setDifficulty] = useState("All");
+  const today = new Date();
+  const startDate = startOfYear(today);
+  const endDate = endOfYear(today);
+  const months = buildCalendarRange(today);
+  const lookup = getHeatmapLookup(entries);
+
+  const activeEntries = entries.filter((e) => {
+    const d = new Date(`${e.date}T00:00:00`);
+    return d >= startDate && d <= endDate;
+  });
+
+  const totals = activeEntries.reduce(
+    (acc, entry) => {
+      const { total, solved } = getDsaStats(entry, difficulty);
+      acc.total += total;
+      acc.solved += solved;
+      return acc;
+    },
+    { total: 0, solved: 0 },
+  );
+
+  const overallRatio = totals.total > 0 ? totals.solved / totals.total : 0;
+  const ratioLabel =
+    overallRatio >= 0.8 ? "Excellent" : overallRatio >= 0.5 ? "Good" : overallRatio > 0 ? "Improving" : "—";
+  const ratioColor =
+    overallRatio >= 0.8
+      ? "text-amber-500"
+      : overallRatio >= 0.5
+        ? "text-emerald-500"
+        : "text-blue-500";
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="surface-card contribution-card p-5 sm:p-6"
+    >
+      <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="mono-label text-xs font-semibold uppercase text-violet-500">
+            DSA Progress
+          </p>
+          <p className="mt-2 text-slate-500 dark:text-slate-400">
+            <span className="text-2xl font-extrabold tracking-tight text-slate-950 dark:text-white">
+              {totals.solved}
+            </span>
+            <span className="text-sm">/{totals.total} solved</span>
+            {totals.total > 0 && (
+              <span className={`ml-2 text-sm font-semibold ${ratioColor}`}>
+                · {ratioLabel} ({Math.round(overallRatio * 100)}%)
+              </span>
+            )}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            Each cell shows your solve ratio for that day. Gold ≥ 80% · Green ≥ 50% · Blue &gt; 0%
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-1 dark:border-white/10 dark:bg-white/5">
+          {DIFFICULTIES.map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDifficulty(d)}
+              className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
+                difficulty === d
+                  ? `bg-white shadow-sm dark:bg-slate-800 ${DIFF_COLORS[d]}`
+                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
+            >
+              {d}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Per-difficulty stats row */}
+      <div className="mb-5 grid grid-cols-3 gap-3">
+        {["Easy", "Medium", "Hard"].map((diff) => {
+          const stats = activeEntries.reduce(
+            (acc, entry) => {
+              const s = getDsaStats(entry, diff);
+              acc.total += s.total;
+              acc.solved += s.solved;
+              return acc;
+            },
+            { total: 0, solved: 0 },
+          );
+          const ratio = stats.total > 0 ? stats.solved / stats.total : 0;
+          const barColor =
+            diff === "Easy"
+              ? "bg-emerald-500"
+              : diff === "Medium"
+                ? "bg-amber-500"
+                : "bg-rose-500";
+          const textColor =
+            diff === "Easy"
+              ? "text-emerald-600 dark:text-emerald-400"
+              : diff === "Medium"
+                ? "text-amber-600 dark:text-amber-400"
+                : "text-rose-600 dark:text-rose-400";
+
+          return (
+            <button
+              key={diff}
+              type="button"
+              onClick={() => setDifficulty(diff)}
+              className={`rounded-2xl border p-3 text-left transition-all hover:-translate-y-0.5 ${
+                difficulty === diff
+                  ? "border-slate-300/60 bg-white shadow-sm dark:border-white/15 dark:bg-white/10"
+                  : "border-slate-200/60 bg-slate-50/60 dark:border-white/8 dark:bg-white/3"
+              }`}
+            >
+              <p className={`text-xs font-semibold ${textColor}`}>{diff}</p>
+              <p className="mt-1 text-lg font-extrabold text-slate-900 dark:text-slate-50">
+                {stats.solved}
+                <span className="text-xs font-medium text-slate-400">
+                  /{stats.total}
+                </span>
+              </p>
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+                <div
+                  className={`h-full rounded-full transition-all ${barColor}`}
+                  style={{ width: `${Math.round(ratio * 100)}%` }}
+                />
+              </div>
+              <p className="mt-1 text-[10px] text-slate-400">
+                {Math.round(ratio * 100)}% solved
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="contribution-scroll overflow-x-auto pb-2">
+        <div className="contribution-graph">
+          {months.map(({ key, label, days }) => (
+            <div className="contribution-month" key={key}>
+              <span className="contribution-month-label">{label}</span>
+              <div
+                className="contribution-days"
+                style={{ "--month-columns": Math.ceil(days.length / 7) }}
+              >
+                {days.map((date, dayIndex) => {
+                  const dateKey = format(date, "yyyy-MM-dd");
+                  const entry = lookup.get(dateKey);
+                  const level = getDsaCellLevel(entry, difficulty);
+                  const { total, solved } = entry
+                    ? getDsaStats(entry, difficulty)
+                    : { total: 0, solved: 0 };
+                  const diffLabel = difficulty === "All" ? "" : ` (${difficulty})`;
+
+                  return (
+                    <button
+                      key={dateKey}
+                      type="button"
+                      onClick={() => onSelectDate?.(dateKey)}
+                      className={["contribution-cell", CELL_CLASS[level]].join(" ")}
+                      title={`${format(date, "EEE, MMM d, yyyy")} · ${solved}/${total} ${difficulty} solved${diffLabel}`}
+                      aria-label={`${format(date, "MMM d, yyyy")}, ${solved} of ${total} solved`}
+                      style={{
+                        gridColumn: Math.floor(dayIndex / 7) + 1,
+                        gridRow: (dayIndex % 7) + 1,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+        <p>Less</p>
+        <div className="flex items-center gap-1.5" aria-label="DSA heatmap legend">
+          <span className="contribution-key contribution-empty" title="No log" />
+          <span className="contribution-key dsa-cell-none" title="Logged, no DSA" />
+          <span className="contribution-key contribution-zero" title="0% solved" />
+          <span className="contribution-key contribution-blue" title="> 0% solved" />
+          <span className="contribution-key contribution-green" title="≥ 50% solved" />
+          <span className="contribution-key contribution-gold" title="≥ 80% solved" />
+        </div>
+        <p>More</p>
+      </div>
+    </motion.section>
+  );
+}
+
+export default DsaHeatmap;

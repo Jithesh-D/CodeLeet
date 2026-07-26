@@ -182,6 +182,7 @@ html.dark .aurora-bg {
   background: rgba(100, 116, 139, 0.18);
 }
 
+.dsa-cell-none { background: rgba(100, 116, 139, 0.32); }
 .contribution-zero { background: #b91c1c; }
 .contribution-red { background: #f87171; }
 .contribution-blue { background: #3b82f6; }

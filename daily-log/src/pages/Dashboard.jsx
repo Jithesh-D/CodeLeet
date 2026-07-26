@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import DayModal from "../components/DayModal/DayModal";
 import YearHeatmap from "../components/Heatmap/YearHeatmap";
+import DsaHeatmap from "../components/Heatmap/DsaHeatmap";
 import StatsCard from "../components/StatsCard/StatsCard";
 import TrendCard from "../components/TrendCard/TrendCard";
 import useDailyEntries from "../hooks/useDailyEntries";
@@ -186,6 +187,8 @@ function Dashboard() {
           )}
         </TrendCard>
       </div>
+
+      <DsaHeatmap entries={entries} onSelectDate={openDateModal} />
 
       <div className="grid gap-4 xl:grid-cols-4">
         <TrendCard
