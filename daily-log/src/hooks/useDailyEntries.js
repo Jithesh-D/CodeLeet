@@ -1,44 +1,63 @@
-import useLocalStorage from "./useLocalStorage";
+import { useCallback } from "react";
+import useFileStorage from "./useFileStorage";
 import {
   createEmptyEntry,
   getDateKey,
   parseStoredEntries,
   removeEntryByDate,
-  STORAGE_KEYS,
   upsertEntry,
 } from "../utils/storage";
 
 function useDailyEntries() {
-  const [storedEntries, setStoredEntries] = useLocalStorage(
-    STORAGE_KEYS.entries,
-    [],
+  const {
+    entries,
+    fileName,
+    isLoading,
+    error,
+    isSupported,
+    isOpen,
+    openExisting,
+    createNew,
+    saveEntries,
+    closeFile,
+  } = useFileStorage();
+
+  const saveEntry = useCallback(
+    (entry) => {
+      const next = upsertEntry(parseStoredEntries(entries), entry);
+      saveEntries(next);
+    },
+    [entries, saveEntries],
   );
-  const entries = parseStoredEntries(storedEntries);
 
-  function saveEntry(entry) {
-    setStoredEntries((currentEntries) =>
-      upsertEntry(parseStoredEntries(currentEntries), entry),
-    );
-  }
+  const deleteEntry = useCallback(
+    (date) => {
+      const next = removeEntryByDate(parseStoredEntries(entries), date);
+      saveEntries(next);
+    },
+    [entries, saveEntries],
+  );
 
-  function deleteEntry(date) {
-    setStoredEntries((currentEntries) =>
-      removeEntryByDate(parseStoredEntries(currentEntries), date),
-    );
-  }
+  const clearEntries = useCallback(() => {
+    saveEntries([]);
+  }, [saveEntries]);
 
-  function clearEntries() {
-    setStoredEntries([]);
-  }
-
-  function getEntryByDate(date = getDateKey()) {
-    return (
-      entries.find((entry) => entry.date === date) ?? createEmptyEntry(date)
-    );
-  }
+  const getEntryByDate = useCallback(
+    (date = getDateKey()) =>
+      entries.find((e) => e.date === date) ?? createEmptyEntry(date),
+    [entries],
+  );
 
   return {
     entries,
+    fileName,
+    isLoading,
+    error,
+    isSupported,
+    isOpen,
+    openExisting,
+    createNew,
+    closeFile,
     saveEntry,
     deleteEntry,
     clearEntries,
