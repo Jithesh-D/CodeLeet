@@ -12,8 +12,10 @@ function useDailyEntries() {
   const {
     entries,
     fileName,
+    lastFileName,
     isLoading,
     error,
+    saveError,
     isSupported,
     isOpen,
     openExisting,
@@ -51,8 +53,10 @@ function useDailyEntries() {
   return {
     entries,
     fileName,
+    lastFileName,
     isLoading,
     error,
+    saveError,
     isSupported,
     isOpen,
     openExisting,

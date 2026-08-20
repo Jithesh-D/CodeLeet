@@ -1,7 +1,9 @@
 import { useCallback, useRef, useState } from "react";
 import { parseStoredEntries, sortEntriesByDate } from "../utils/storage";
 
-// Persists the file handle across hot-reloads in dev (module-level ref)
+const LAST_FILE_KEY = "daily-log-last-filename";
+
+// Module-level handle survives hot-reloads in dev
 let _cachedHandle = null;
 
 async function readEntriesFromHandle(handle) {
@@ -25,18 +27,30 @@ async function writeEntriesToHandle(handle, entries) {
 
 function useFileStorage() {
   const handleRef = useRef(_cachedHandle);
-  const [entries, setEntries] = useState(() => {
-    // If we already have a handle from a previous render cycle, entries start empty
-    // and get loaded via openExisting / createNew
-    return [];
-  });
-  const [fileName, setFileName] = useState(
-    _cachedHandle ? _cachedHandle.name : null,
-  );
+  const writeQueueRef = useRef(Promise.resolve()); // serialise writes
+
+  const [entries, setEntries] = useState([]);
+  const [fileName, setFileName] = useState(_cachedHandle ? _cachedHandle.name : null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [saveError, setSaveError] = useState(null); // persistent banner for write failures
 
-  const isSupported = typeof window !== "undefined" && "showOpenFilePicker" in window;
+  const lastFileName =
+    typeof window !== "undefined"
+      ? window.localStorage.getItem(LAST_FILE_KEY)
+      : null;
+
+  const isSupported =
+    typeof window !== "undefined" && "showOpenFilePicker" in window;
+
+  function _setHandle(handle, loaded) {
+    handleRef.current = handle;
+    _cachedHandle = handle;
+    window.localStorage.setItem(LAST_FILE_KEY, handle.name);
+    setFileName(handle.name);
+    setEntries(loaded);
+    setSaveError(null);
+  }
 
   const openExisting = useCallback(async () => {
     setError(null);
@@ -47,10 +61,7 @@ function useFileStorage() {
         multiple: false,
       });
       const loaded = await readEntriesFromHandle(handle);
-      handleRef.current = handle;
-      _cachedHandle = handle;
-      setFileName(handle.name);
-      setEntries(loaded);
+      _setHandle(handle, loaded);
     } catch (err) {
       if (err.name !== "AbortError") setError("Could not open file.");
     } finally {
@@ -67,10 +78,7 @@ function useFileStorage() {
         types: [{ description: "Daily Log JSON", accept: { "application/json": [".json"] } }],
       });
       await writeEntriesToHandle(handle, []);
-      handleRef.current = handle;
-      _cachedHandle = handle;
-      setFileName(handle.name);
-      setEntries([]);
+      _setHandle(handle, []);
     } catch (err) {
       if (err.name !== "AbortError") setError("Could not create file.");
     } finally {
@@ -78,30 +86,40 @@ function useFileStorage() {
     }
   }, []);
 
-  const saveEntries = useCallback(async (nextEntries) => {
+  // Writes are queued so rapid saves never race/corrupt the file.
+  // State is updated only AFTER a successful write.
+  const saveEntries = useCallback((nextEntries) => {
     if (!handleRef.current) return;
     const sorted = sortEntriesByDate(nextEntries);
-    setEntries(sorted);
-    try {
-      await writeEntriesToHandle(handleRef.current, sorted);
-    } catch {
-      setError("Failed to save. Check file permissions.");
-    }
+
+    writeQueueRef.current = writeQueueRef.current.then(async () => {
+      try {
+        await writeEntriesToHandle(handleRef.current, sorted);
+        setEntries(sorted); // update state only after successful write
+        setSaveError(null);
+      } catch {
+        setSaveError("Save failed — check file permissions or disk space.");
+      }
+    });
   }, []);
 
   const closeFile = useCallback(() => {
     handleRef.current = null;
     _cachedHandle = null;
+    window.localStorage.removeItem(LAST_FILE_KEY);
     setEntries([]);
     setFileName(null);
     setError(null);
+    setSaveError(null);
   }, []);
 
   return {
     entries,
     fileName,
+    lastFileName,   // used by FileGate to show "reopen last file" prompt
     isLoading,
     error,
+    saveError,      // persistent banner shown in AppShell
     isSupported,
     isOpen: Boolean(fileName),
     openExisting,

@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { FiActivity, FiBarChart2, FiHome, FiSettings, FiX } from "react-icons/fi";
+import { createContext, useContext, useEffect } from "react";
+import { FiActivity, FiAlertCircle, FiBarChart2, FiHome, FiSettings, FiX } from "react-icons/fi";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import ThemeToggle from "./ThemeToggle";
 import FileGate from "./FileGate";
@@ -13,18 +13,22 @@ const navigation = [
   { to: "/settings", label: "Settings", icon: FiSettings },
 ];
 
-// Context so child pages can access file-level actions without prop drilling
-import { createContext, useContext } from "react";
 export const EntriesContext = createContext(null);
+
 export function useEntries() {
-  return useContext(EntriesContext);
+  const ctx = useContext(EntriesContext);
+  if (!ctx) throw new Error("useEntries must be used inside AppShell");
+  return ctx;
 }
 
 function AppShell() {
   const location = useLocation();
   const [theme, setTheme] = useLocalStorage(STORAGE_KEYS.theme, "dark");
   const dailyEntries = useDailyEntries();
-  const { isOpen, isLoading, error, isSupported, openExisting, createNew, closeFile, fileName } = dailyEntries;
+  const {
+    isOpen, isLoading, error, saveError, isSupported,
+    openExisting, createNew, closeFile, fileName, lastFileName,
+  } = dailyEntries;
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -43,6 +47,7 @@ function AppShell() {
           isLoading={isLoading}
           error={error}
           isSupported={isSupported}
+          lastFileName={lastFileName}
         />
       </>
     );
@@ -57,10 +62,7 @@ function AppShell() {
 
         <div className="relative mx-auto min-h-screen max-w-[1680px] px-3 pb-8 pt-3 sm:px-5 sm:pt-5 lg:px-8">
           <header className="glass-nav sticky top-3 z-30 mx-auto flex max-w-[1600px] items-center justify-between gap-3 rounded-[1.4rem] px-3 py-2.5 sm:px-4">
-            <NavLink
-              to="/"
-              className="group flex shrink-0 items-center gap-3 rounded-xl px-1 py-1"
-            >
+            <NavLink to="/" className="group flex shrink-0 items-center gap-3 rounded-xl px-1 py-1">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 text-white shadow-[0_8px_22px_rgba(37,99,235,0.35)]">
                 <FiActivity className="h-4 w-4" />
               </span>
@@ -101,14 +103,14 @@ function AppShell() {
             <div className="flex shrink-0 items-center gap-2">
               {fileName && (
                 <div className="hidden items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 pl-3 pr-1.5 py-1 lg:flex">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-300 max-w-[140px] truncate">
+                  <span className="max-w-[140px] truncate text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-300">
                     {fileName}
                   </span>
                   <button
                     type="button"
                     onClick={closeFile}
                     title="Close file"
-                    className="rounded-full p-0.5 text-emerald-500 hover:bg-emerald-500/20 transition"
+                    className="rounded-full p-0.5 text-emerald-500 transition hover:bg-emerald-500/20"
                   >
                     <FiX className="h-3 w-3" />
                   </button>
@@ -120,6 +122,14 @@ function AppShell() {
               />
             </div>
           </header>
+
+          {/* Persistent save-error banner */}
+          {saveError && (
+            <div className="mx-auto mt-3 flex max-w-[1600px] items-center gap-3 rounded-2xl border border-rose-300/50 bg-rose-50 px-4 py-3 dark:border-rose-500/20 dark:bg-rose-500/10">
+              <FiAlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+              <p className="text-sm text-rose-700 dark:text-rose-300">{saveError}</p>
+            </div>
+          )}
 
           <main className="mx-auto max-w-[1600px] py-7 sm:py-9 lg:py-11">
             <div className="mb-6 flex items-center gap-3 px-1 sm:hidden">

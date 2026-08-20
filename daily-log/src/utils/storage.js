@@ -5,29 +5,22 @@ export const STORAGE_KEYS = {
   theme: "daily-log-theme",
 };
 
-export const MOOD_OPTIONS = [
-  "Balanced",
-  "Focused",
-  "Calm",
-  "Tired",
-  "Stressed",
-];
+export const MOOD_OPTIONS = ["Balanced", "Focused", "Calm", "Tired", "Stressed"];
 
 export const HABIT_OPTIONS = [
-  "Workout",
-  "Water",
-  "Meditation",
-  "Reading",
-  "Deep work",
-  "Walk",
+  "Workout", "Water", "Meditation", "Reading", "Deep work", "Walk",
 ];
 
+// Essential = new topic studied today (no overlap with revision)
 export const ESSENTIAL_STUDY_OPTIONS = [
-  "OS",
-  "System design",
-  "CN",
-  "DBMS",
-  "Aptitude",
+  "OS", "System design", "CN", "DBMS", "Aptitude",
+];
+
+// Revision = revisiting previously studied material
+// Intentionally separate from ESSENTIAL_STUDY_OPTIONS to prevent double-counting
+export const REVISION_OPTIONS = [
+  "DSA concepts", "OS revision", "System design revision",
+  "CN revision", "DBMS revision", "Math / Aptitude",
 ];
 
 export function getDateKey(date = new Date()) {
@@ -45,6 +38,7 @@ export function createEmptyEntry(dateKey = getDateKey()) {
     instagramMinutes: 0,
     dsaQuestions: [],
     essentialsStudy: [],
+    revision: [],
     habits: [],
     notes: "",
     updatedAt: "",
@@ -52,37 +46,36 @@ export function createEmptyEntry(dateKey = getDateKey()) {
 }
 
 export function getSolvedDsaCount(questions = []) {
-  return Array.isArray(questions)
-    ? questions.filter((q) => q.solved).length
-    : 0;
+  return Array.isArray(questions) ? questions.filter((q) => q.solved).length : 0;
 }
 
 export function getTotalDsaCount(questions = []) {
   return Array.isArray(questions) ? questions.length : 0;
 }
 
-// Easy=1, Medium=2, Hard=3 — solved=full, bruteForce=half, unsolved=0
+// Easy=1, Medium=2, Hard=3
+// solved = full weight, bruteForce (not solved) = half, learntNew = +0.5 bonus
 const DIFFICULTY_WEIGHT = { Easy: 1, Medium: 2, Hard: 3 };
 
 export function getDsaWeight(questions = []) {
   if (!Array.isArray(questions)) return 0;
   return questions.reduce((sum, q) => {
     const base = DIFFICULTY_WEIGHT[q.difficulty] ?? 1;
-    if (q.solved) return sum + base;
-    if (q.bruteForce) return sum + base * 0.5;
-    return sum;
+    let w = 0;
+    if (q.solved) w += base;
+    else if (q.bruteForce) w += base * 0.5;
+    if (q.learntNew) w += 0.5;
+    return sum + w;
   }, 0);
 }
 
-// Heatmap colour: based on total questions ADDED (effort) + essential bonus
-// total < 2 → red, < 4 → blue, < 7 → green, 7+ → gold
-export function getDailyProgress(dsaQuestions = [], essentialsStudy = []) {
+// Heatmap colour: total questions added + essential bonus (cap +2) + revision bonus (cap +1)
+// Revision gets a smaller cap here since it's reinforcement not new learning
+export function getDailyProgress(dsaQuestions = [], essentialsStudy = [], revision = []) {
   const total = getTotalDsaCount(dsaQuestions);
-  const essentialBonus = Math.min(
-    Array.isArray(essentialsStudy) ? essentialsStudy.length : 0,
-    2,
-  );
-  const count = total + essentialBonus;
+  const essentialBonus = Math.min(Array.isArray(essentialsStudy) ? essentialsStudy.length : 0, 2);
+  const revisionBonus = Math.min(Array.isArray(revision) ? revision.length : 0, 1);
+  const count = total + essentialBonus + revisionBonus;
 
   if (count === 0) return "zero";
   if (count < 2) return "red";
@@ -91,14 +84,13 @@ export function getDailyProgress(dsaQuestions = [], essentialsStudy = []) {
   return "gold";
 }
 
-// Score: based on solved weight (quality) + essential bonus
-export function getCalculatedScore(dsaQuestions = [], essentialsStudy = []) {
+// Score: solved weight + essential bonus (cap +2) + revision bonus (cap +1)
+// Combined cap of +3 prevents reaching gold purely through topic selection
+export function getCalculatedScore(dsaQuestions = [], essentialsStudy = [], revision = []) {
   const weight = getDsaWeight(dsaQuestions);
-  const essentialBonus = Math.min(
-    Array.isArray(essentialsStudy) ? essentialsStudy.length : 0,
-    2,
-  );
-  const total = weight + essentialBonus;
+  const essentialBonus = Math.min(Array.isArray(essentialsStudy) ? essentialsStudy.length : 0, 2);
+  const revisionBonus = Math.min(Array.isArray(revision) ? revision.length : 0, 1);
+  const total = weight + essentialBonus + revisionBonus;
 
   if (total === 0) return 0;
   if (total < 2) return 5;
@@ -114,9 +106,14 @@ function normalizeDsaQuestions(value) {
       ? question.difficulty
       : "Easy",
     solved: Boolean(question?.solved),
-    bruteForce: Boolean(question?.bruteForce),
+    // bruteForce is only meaningful when not solved — clear it if solved
+    bruteForce: Boolean(question?.solved) ? false : Boolean(question?.bruteForce),
+    learntNew: Boolean(question?.learntNew),
     note: typeof question?.note === "string" ? question.note.slice(0, 20) : "",
-    timeMinutes: Math.max(0, parseNumber(question?.timeMinutes, 0)),
+    // timeMinutes only meaningful when solved — clear it if unsolved
+    timeMinutes: Boolean(question?.solved)
+      ? Math.max(0, parseNumber(question?.timeMinutes, 0))
+      : 0,
   }));
 }
 
@@ -129,14 +126,17 @@ export function normalizeEntry(entry = {}, dateKey = entry.date ?? getDateKey())
   const baseEntry = createEmptyEntry(dateKey);
   const dsaQuestions = normalizeDsaQuestions(entry.dsaQuestions);
   const essentialsStudy = Array.isArray(entry.essentialsStudy)
-    ? entry.essentialsStudy.filter((topic) => ESSENTIAL_STUDY_OPTIONS.includes(topic))
+    ? entry.essentialsStudy.filter((t) => ESSENTIAL_STUDY_OPTIONS.includes(t))
+    : [];
+  const revision = Array.isArray(entry.revision)
+    ? entry.revision.filter((t) => REVISION_OPTIONS.includes(t))
     : [];
 
   return {
     ...baseEntry,
     ...entry,
     date: dateKey,
-    score: getCalculatedScore(dsaQuestions, essentialsStudy),
+    score: getCalculatedScore(dsaQuestions, essentialsStudy, revision),
     studyHours: parseNumber(entry.studyHours, baseEntry.studyHours),
     sleepHours: parseNumber(entry.sleepHours, baseEntry.sleepHours),
     instagramMinutes: Math.min(
@@ -145,31 +145,33 @@ export function normalizeEntry(entry = {}, dateKey = entry.date ?? getDateKey())
     ),
     dsaQuestions,
     essentialsStudy,
+    revision,
     habits: Array.isArray(entry.habits) ? entry.habits.filter(Boolean) : [],
-    notes: entry.notes ?? "",
+    notes: typeof entry.notes === "string" ? entry.notes.slice(0, 500) : "",
     updatedAt: entry.updatedAt || new Date().toISOString(),
   };
 }
 
 export function createFormState(entry = createEmptyEntry()) {
-  const normalizedEntry = normalizeEntry(entry, entry.date);
+  const n = normalizeEntry(entry, entry.date);
   return {
-    date: normalizedEntry.date,
-    mood: normalizedEntry.mood,
-    studyHours: String(normalizedEntry.studyHours || ""),
-    sleepHours: String(normalizedEntry.sleepHours || ""),
-    bedtime: normalizedEntry.bedtime,
-    instagramMinutes: String(normalizedEntry.instagramMinutes || ""),
-    dsaQuestions: normalizedEntry.dsaQuestions,
-    essentialsStudy: normalizedEntry.essentialsStudy,
-    habits: normalizedEntry.habits,
-    notes: normalizedEntry.notes,
+    date: n.date,
+    mood: n.mood,
+    studyHours: String(n.studyHours || ""),
+    sleepHours: String(n.sleepHours || ""),
+    bedtime: n.bedtime,
+    instagramMinutes: String(n.instagramMinutes || ""),
+    dsaQuestions: n.dsaQuestions,
+    essentialsStudy: n.essentialsStudy,
+    revision: n.revision,
+    habits: n.habits,
+    notes: n.notes,
   };
 }
 
 export function sortEntriesByDate(entries = []) {
-  return [...entries].sort((left, right) =>
-    left.date < right.date ? -1 : left.date > right.date ? 1 : 0,
+  return [...entries].sort((a, b) =>
+    a.date < b.date ? -1 : a.date > b.date ? 1 : 0,
   );
 }
 
@@ -183,15 +185,15 @@ export function parseStoredEntries(value) {
 }
 
 export function upsertEntry(entries = [], nextEntry = {}) {
-  const normalizedEntry = normalizeEntry(nextEntry, nextEntry?.date);
-  const filteredEntries = entries.filter(
-    (entry) => entry.date !== normalizedEntry.date,
-  );
-  return sortEntriesByDate([...filteredEntries, normalizedEntry]);
+  const normalized = normalizeEntry(nextEntry, nextEntry?.date);
+  return sortEntriesByDate([
+    ...entries.filter((e) => e.date !== normalized.date),
+    normalized,
+  ]);
 }
 
 export function removeEntryByDate(entries = [], date) {
-  return sortEntriesByDate(entries.filter((entry) => entry.date !== date));
+  return sortEntriesByDate(entries.filter((e) => e.date !== date));
 }
 
 export function exportEntriesPayload(entries = []) {
@@ -203,9 +205,7 @@ export function exportEntriesPayload(entries = []) {
 }
 
 export function importEntriesPayload(rawText = "") {
-  const parsedValue = JSON.parse(rawText);
-  const incomingEntries = Array.isArray(parsedValue)
-    ? parsedValue
-    : parsedValue?.entries;
-  return parseStoredEntries(incomingEntries);
+  const parsed = JSON.parse(rawText);
+  const raw = Array.isArray(parsed) ? parsed : parsed?.entries;
+  return parseStoredEntries(raw);
 }
