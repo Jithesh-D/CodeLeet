@@ -50,7 +50,7 @@ function Dashboard() {
 
   const streakMeta = useMemo(() => getStreakMeta(entries), [entries]);
   const metricSummary = useMemo(() => getMetricSummary(entries), [entries]);
-  const recentEntries = useMemo(() => getRecentEntries(entries, 8).reverse(), [entries]);
+  const recentEntries = useMemo(() => getRecentEntries(entries, entries.length).reverse(), [entries]);
   const dashboardSeries = useMemo(() => buildDailySeries(entries), [entries]);
   const weeklyScoreSeries = useMemo(() => buildWeeklyScoreSeries(entries), [entries]);
 
@@ -104,12 +104,13 @@ function Dashboard() {
         <StatsCard label="Average sleep" value={`${metricSummary.avgSleepHours}h`} detail="Nightly average" accent="rose" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+      <div className="grid items-stretch gap-4 lg:grid-cols-[1.35fr_0.65fr]">
         <YearHeatmap entries={entries} onSelectDate={openDateModal} />
 
         <TrendCard
           title="Recent logs"
           subtitle="Most recent entries"
+          className="h-full"
           rightSlot={
             <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
               {entries.length} total
@@ -117,7 +118,10 @@ function Dashboard() {
           }
         >
           {recentEntries.length ? (
-            <div className="space-y-2">
+            <div
+              className="recent-logs-scroll max-h-[14.75rem] space-y-2 overflow-y-auto pr-1"
+              aria-label="All recent logs"
+            >
               {recentEntries.map((entry) => (
                 <button
                   key={entry.date}

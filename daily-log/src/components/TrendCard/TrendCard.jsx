@@ -1,6 +1,6 @@
-function TrendCard({ title, subtitle, rightSlot, children }) {
+function TrendCard({ title, subtitle, rightSlot, children, className = "" }) {
   return (
-    <article className="surface-card rounded-3xl p-6">
+    <article className={`surface-card rounded-3xl p-6 ${className}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold tracking-tight text-slate-950 dark:text-slate-50">
