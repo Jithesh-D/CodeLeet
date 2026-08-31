@@ -76,6 +76,18 @@ export function getStreakMeta(entries = []) {
   };
 }
 
+export function getMissedDays(entries = [], lookbackDays = 30) {
+  const dateSet = new Set(entries.map((e) => e.date));
+  const today = new Date();
+  const missed = [];
+  for (let i = 1; i <= lookbackDays; i++) {
+    const d = subDays(today, i);
+    const key = format(d, "yyyy-MM-dd");
+    if (!dateSet.has(key)) missed.push(key);
+  }
+  return missed;
+}
+
 export function getCompletedDatesBetween(entries = [], startDate, endDate) {
   const dateSet = new Set(toUniqueSortedDates(entries));
   const days = [];

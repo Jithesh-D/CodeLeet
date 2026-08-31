@@ -4,6 +4,7 @@ import StatsCard from "../components/StatsCard/StatsCard";
 import TrendCard from "../components/TrendCard/TrendCard";
 import { useEntries } from "../components/AppShell";
 import { exportEntriesPayload, getDateKey, importEntriesPayload, parseStoredEntries } from "../utils/storage";
+import { exportToCsv } from "../utils/analytics";
 
 function downloadTextFile(text, fileName) {
   const blob = new Blob([text], { type: "application/json" });
@@ -18,6 +19,18 @@ function downloadTextFile(text, fileName) {
 function Settings() {
   const { entries, fileName, clearEntries, saveEntry, openExisting, createNew, closeFile } = useEntries();
   const [status, setStatus] = useState("");
+
+  function handleCsvExport() {
+    const csv = exportToCsv(entries);
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `daily-log-${getDateKey()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus("CSV exported.");
+  }
 
   function handleExport() {
     const payload = exportEntriesPayload(entries);
@@ -61,10 +74,9 @@ function Settings() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <StatsCard label="Entries in file" value={entries.length} detail={fileName ?? "No file open"} />
         <StatsCard label="Storage mode" value="File" detail="Local .json file" accent="emerald" />
-        <StatsCard label="Sync status" value="Disabled" detail="No cloud backend" accent="rose" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -106,6 +118,14 @@ function Settings() {
           rightSlot={<FiDatabase className="h-5 w-5 text-cyan-500" />}
         >
           <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={handleCsvExport}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_32px_rgba(16,185,129,0.28)] transition hover:-translate-y-0.5 hover:bg-emerald-400"
+            >
+              <FiDownload className="h-4 w-4" />
+              Export CSV
+            </button>
             <button
               type="button"
               onClick={handleExport}

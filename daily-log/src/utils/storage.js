@@ -35,7 +35,7 @@ export function createEmptyEntry(dateKey = getDateKey()) {
     studyHours: 0,
     sleepHours: 0,
     bedtime: "",
-    instagramMinutes: 0,
+    socialScrollMinutes: 0,
     dsaQuestions: [],
     essentialsStudy: [],
     revision: [],
@@ -139,8 +139,8 @@ export function normalizeEntry(entry = {}, dateKey = entry.date ?? getDateKey())
     score: getCalculatedScore(dsaQuestions, essentialsStudy, revision),
     studyHours: parseNumber(entry.studyHours, baseEntry.studyHours),
     sleepHours: parseNumber(entry.sleepHours, baseEntry.sleepHours),
-    instagramMinutes: Math.min(
-      parseNumber(entry.instagramMinutes, baseEntry.instagramMinutes),
+    socialScrollMinutes: Math.min(
+      parseNumber(entry.socialScrollMinutes ?? entry.instagramMinutes, baseEntry.socialScrollMinutes),
       600,
     ),
     dsaQuestions,
@@ -160,7 +160,7 @@ export function createFormState(entry = createEmptyEntry()) {
     studyHours: String(n.studyHours || ""),
     sleepHours: String(n.sleepHours || ""),
     bedtime: n.bedtime,
-    instagramMinutes: String(n.instagramMinutes || ""),
+    socialScrollMinutes: String(n.socialScrollMinutes || ""),
     dsaQuestions: n.dsaQuestions,
     essentialsStudy: n.essentialsStudy,
     revision: n.revision,
