@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { eachDayOfInterval, endOfYear, format, getDay, startOfYear } from "date-fns";
 import { getHeatmapLookup } from "../../utils/heatmap";
+import { getDsaProgressQuestions } from "../../utils/storage";
 
 const DIFFICULTIES = ["All", "Easy", "Medium", "Hard"];
 
@@ -13,14 +14,15 @@ const DIFF_COLORS = {
 };
 
 function getDsaStats(entry, difficulty) {
-  if (!entry?.dsaQuestions?.length) return { total: 0, solved: 0 };
-  const questions =
+  const questions = getDsaProgressQuestions(entry?.dsaQuestions ?? []);
+  if (!questions.length) return { total: 0, solved: 0 };
+  const filteredQuestions =
     difficulty === "All"
-      ? entry.dsaQuestions
-      : entry.dsaQuestions.filter((q) => q.difficulty === difficulty);
+      ? questions
+      : questions.filter((q) => q.difficulty === difficulty);
   return {
-    total: questions.length,
-    solved: questions.filter((q) => q.solved).length,
+    total: filteredQuestions.length,
+    solved: filteredQuestions.filter((q) => q.solved).length,
   };
 }
 

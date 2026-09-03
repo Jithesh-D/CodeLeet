@@ -45,6 +45,11 @@ export function createEmptyEntry(dateKey = getDateKey()) {
   };
 }
 
+export function getDsaProgressQuestions(questions = []) {
+  if (!Array.isArray(questions)) return [];
+  return questions.filter((q) => !q.learntNew);
+}
+
 export function getSolvedDsaCount(questions = []) {
   return Array.isArray(questions) ? questions.filter((q) => q.solved).length : 0;
 }
