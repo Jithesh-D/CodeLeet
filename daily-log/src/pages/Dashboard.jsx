@@ -3,6 +3,8 @@ import { format, parseISO } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import {
   FiArrowUpRight,
+  FiChevronLeft,
+  FiChevronRight,
   FiEdit3,
   FiTarget,
   FiTrendingUp,
@@ -22,6 +24,7 @@ import {
 import DayModal from "../components/DayModal/DayModal";
 import YearHeatmap from "../components/Heatmap/YearHeatmap";
 import DsaHeatmap from "../components/Heatmap/DsaHeatmap";
+import ContestHeatmap from "../components/Heatmap/ContestHeatmap";
 import StatsCard from "../components/StatsCard/StatsCard";
 import TrendCard from "../components/TrendCard/TrendCard";
 import { useEntries } from "../components/AppShell";
@@ -60,11 +63,16 @@ function Dashboard() {
   const { entries, getEntryByDate, saveEntry, deleteEntry } = useEntries();
   const [isModalOpen, setModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(getDateKey());
-  const [weeklyGoal, setWeeklyGoal] = useLocalStorage(
-    "daily-log-weekly-dsa-goal",
-    15,
+  const [activeGoalIndex, setActiveGoalIndex] = useState(0);
+  const [weeklyGoals, setWeeklyGoals] = useLocalStorage(
+    "daily-log-weekly-goals",
+    {
+      dsa: 15,
+      study: 14,
+      sleep: 7,
+      habitConsistency: 4,
+    },
   );
-  const [goalInput, setGoalInput] = useState(String(weeklyGoal));
 
   const selectedEntry = useMemo(
     () => getEntryByDate(selectedDate) ?? createEmptyEntry(selectedDate),
@@ -93,24 +101,103 @@ function Dashboard() {
     [entries, todayDate],
   );
 
-  // This week's DSA solved count
-  const thisWeekSolved = useMemo(() => {
-    const weekStart = format(
-      new Date(
-        new Date().setDate(
-          new Date().getDate() -
-            new Date().getDay() +
-            (new Date().getDay() === 0 ? -6 : 1),
-        ),
-      ),
-      "yyyy-MM-dd",
-    );
-    return entries
-      .filter((e) => e.date >= weekStart)
-      .reduce((sum, e) => sum + getSolvedDsaCount(e.dsaQuestions), 0);
-  }, [entries]);
+  const weekStart = useMemo(() => {
+    const today = new Date();
+    const MondayOffset = today.getDay() === 0 ? -6 : 1 - today.getDay();
+    const start = new Date(today);
+    start.setHours(0, 0, 0, 0);
+    start.setDate(today.getDate() + MondayOffset);
+    return format(start, "yyyy-MM-dd");
+  }, []);
 
-  const goalProgress = Math.min((thisWeekSolved / weeklyGoal) * 100, 100);
+  const currentWeekEntries = useMemo(
+    () => entries.filter((e) => e.date >= weekStart),
+    [entries, weekStart],
+  );
+
+  const thisWeekSolved = useMemo(
+    () => currentWeekEntries.reduce((sum, e) => sum + getSolvedDsaCount(e.dsaQuestions), 0),
+    [currentWeekEntries],
+  );
+
+  const thisWeekStudyHours = useMemo(
+    () => currentWeekEntries.reduce((sum, e) => sum + Number(e.studyHours || 0), 0),
+    [currentWeekEntries],
+  );
+
+  const thisWeekAverageSleep = useMemo(() => {
+    if (!currentWeekEntries.length) return 0;
+    const totalSleep = currentWeekEntries.reduce((sum, e) => sum + Number(e.sleepHours || 0), 0);
+    return totalSleep / currentWeekEntries.length;
+  }, [currentWeekEntries]);
+
+  const thisWeekHabitDays = useMemo(
+    () => currentWeekEntries.filter((e) => (e.habits || []).length >= 2).length,
+    [currentWeekEntries],
+  );
+
+  function updateWeeklyGoal(key, nextValue) {
+    const numericValue = Number(nextValue);
+    setWeeklyGoals((current) => ({
+      ...current,
+      [key]: Number.isFinite(numericValue) && numericValue >= 0 ? numericValue : 0,
+    }));
+  }
+
+  const goalCards = [
+    {
+      key: "dsa",
+      label: "DSA",
+      value: thisWeekSolved,
+      target: weeklyGoals.dsa,
+      unit: "solved",
+      color: "violet",
+    },
+    {
+      key: "study",
+      label: "Study",
+      value: thisWeekStudyHours,
+      target: weeklyGoals.study,
+      unit: "h",
+      color: "emerald",
+    },
+    {
+      key: "sleep",
+      label: "Sleep",
+      value: Number(thisWeekAverageSleep.toFixed(1)),
+      target: weeklyGoals.sleep,
+      unit: "h avg",
+      color: "amber",
+    },
+    {
+      key: "habitConsistency",
+      label: "Habits",
+      value: thisWeekHabitDays,
+      target: weeklyGoals.habitConsistency,
+      unit: "days",
+      color: "cyan",
+    },
+  ];
+
+  const activeGoal = goalCards[activeGoalIndex];
+  const activeGoalProgress =
+    activeGoal.target > 0
+      ? Math.min((activeGoal.value / activeGoal.target) * 100, 100)
+      : 0;
+  const activeGoalColor =
+    activeGoal.color === "violet"
+      ? "bg-violet-500"
+      : activeGoal.color === "emerald"
+        ? "bg-emerald-500"
+        : activeGoal.color === "amber"
+          ? "bg-amber-500"
+          : "bg-cyan-500";
+
+  function changeActiveGoal(direction) {
+    setActiveGoalIndex(
+      (current) => (current + direction + goalCards.length) % goalCards.length,
+    );
+  }
 
   // Keyboard shortcut: press L to open today's log
   useEffect(() => {
@@ -148,11 +235,6 @@ function Dashboard() {
     setModalOpen(false);
   }
 
-  function handleGoalSave() {
-    const val = parseInt(goalInput, 10);
-    if (val > 0) setWeeklyGoal(val);
-  }
-
   return (
     <section className="space-y-7">
       <motion.div
@@ -170,47 +252,31 @@ function Dashboard() {
           </h3>
         </div>
 
-        <button
+        <motion.button
           type="button"
           onClick={openTodayModal}
-          className="inline-flex items-center justify-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_14px_36px_rgba(6,182,212,0.32)] transition hover:-translate-y-0.5 hover:bg-cyan-400"
+          whileHover={{ scale: 1.04, y: -2 }}
+          whileTap={{ scale: 0.96 }}
+          className="inline-flex items-center justify-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_14px_36px_rgba(6,182,212,0.32)] transition hover:bg-cyan-400"
         >
           {hasTodayEntry ? "Edit today's log" : "Start today's log"}
           <FiArrowUpRight className="h-4 w-4" />
-        </button>
+        </motion.button>
       </motion.div>
 
       {/* Stats row */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatsCard
-          label="Current streak"
-          value={`${streakMeta.current} days`}
-          detail="Consecutive days logged"
-          accent="emerald"
-        />
-        <StatsCard
-          label="Longest streak"
-          value={`${streakMeta.longest} days`}
-          detail="Best run so far"
-          accent="amber"
-        />
-        <StatsCard
-          label="Average score"
-          value={`${metricSummary.avgScore}/10`}
-          detail="Across all entries"
-        />
-        <StatsCard
-          label="Average sleep"
-          value={`${metricSummary.avgSleepHours}h`}
-          detail="Nightly average"
-          accent="rose"
-        />
+        <StatsCard label="Current streak" value={`${streakMeta.current} days`} detail="Consecutive days logged" accent="emerald" index={0} />
+        <StatsCard label="Longest streak" value={`${streakMeta.longest} days`} detail="Best run so far" accent="amber" index={1} />
+        <StatsCard label="Average score" value={`${metricSummary.avgScore}/10`} detail="Across all entries" index={2} />
+        <StatsCard label="Average sleep" value={`${metricSummary.avgSleepHours}h`} detail="Nightly average" accent="rose" index={3} />
       </div>
 
       {/* Today at a glance + Best day + Weekly goal */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* Today at a glance */}
-        <TrendCard
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Today at a glance */}
+          <TrendCard
           title="Today at a glance"
           subtitle={format(new Date(), "EEEE, MMM d")}
           rightSlot={<FiZap className="h-5 w-5 text-cyan-500" />}
@@ -273,10 +339,10 @@ function Dashboard() {
               </button>
             </div>
           )}
-        </TrendCard>
+          </TrendCard>
 
-        {/* Best day */}
-        <TrendCard
+          {/* Best day */}
+          <TrendCard
           title="Best day"
           subtitle="Your highest scored entry"
           rightSlot={<FiTrendingUp className="h-5 w-5 text-amber-500" />}
@@ -329,49 +395,40 @@ function Dashboard() {
               No entries yet.
             </p>
           )}
-        </TrendCard>
+          </TrendCard>
+        </div>
 
-        {/* Weekly DSA goal */}
+        {/* Weekly goals */}
         <TrendCard
-          title="Weekly DSA goal"
-          subtitle="Problems solved this week"
+          title="Weekly goals"
+          subtitle="Track performance this week"
           rightSlot={<FiTarget className="h-5 w-5 text-violet-500" />}
         >
-          <div className="space-y-4">
-            <div className="flex items-end justify-between">
-              <span className="text-4xl font-extrabold tracking-tight text-violet-500">
-                {thisWeekSolved}
-              </span>
-              <span className="text-sm text-slate-400">
-                / {weeklyGoal} goal
-              </span>
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 dark:border-white/10 dark:bg-white/5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">{activeGoal.label}</p>
+                <p className="mt-1 text-3xl font-extrabold text-slate-900 dark:text-slate-50">
+                  {activeGoal.value}<span className="ml-1 text-xs font-medium text-slate-400">{activeGoal.unit}</span>
+                </p>
+              </div>
+              <label className="flex items-center gap-2 text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                <span>Goal</span>
+                <input type="number" min="0" value={activeGoal.target} onChange={(e) => updateWeeklyGoal(activeGoal.key, e.target.value)} className="w-16 rounded-lg border border-slate-200 bg-white px-2 py-1 text-center text-[11px] font-semibold text-slate-900 outline-none focus:border-violet-400 dark:border-white/10 dark:bg-white/5 dark:text-slate-50" />
+              </label>
             </div>
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
-              <div
-                className="h-full rounded-full bg-violet-500 transition-all duration-500"
-                style={{ width: `${goalProgress}%` }}
-              />
+            <div className="mt-5 h-2.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+              <div className={`h-full rounded-full transition-all duration-500 ${activeGoalColor}`} style={{ width: `${activeGoalProgress}%` }} />
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {goalProgress >= 100
-                ? "🎉 Goal reached!"
-                : `${weeklyGoal - thisWeekSolved} more to hit your goal`}
+            <p className="mt-2 text-[10px] text-slate-500 dark:text-slate-400">
+              {activeGoalProgress >= 100 ? "Goal reached 🎉" : `${Math.max(0, activeGoal.target - activeGoal.value)} ${activeGoal.unit} left`}
             </p>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="1"
-                value={goalInput}
-                onChange={(e) => setGoalInput(e.target.value)}
-                className="w-16 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900 outline-none focus:border-violet-400 dark:border-white/10 dark:bg-white/5 dark:text-slate-50"
-              />
-              <button
-                type="button"
-                onClick={handleGoalSave}
-                className="rounded-full bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-violet-600 transition hover:bg-violet-500 hover:text-white dark:text-violet-300"
-              >
-                Set goal
-              </button>
+            <div className="mt-4 flex items-center justify-between">
+              <button type="button" onClick={() => changeActiveGoal(-1)} aria-label="Show previous weekly goal" className="rounded-full border border-slate-200 p-1.5 text-slate-500 transition hover:border-violet-300 hover:text-violet-500 dark:border-white/10 dark:text-slate-300"><FiChevronLeft className="h-4 w-4" /></button>
+              <div className="flex items-center gap-1.5" aria-label={`Goal ${activeGoalIndex + 1} of ${goalCards.length}`}>
+                {goalCards.map((goal, index) => <button key={goal.key} type="button" onClick={() => setActiveGoalIndex(index)} aria-label={`Show ${goal.label} goal`} className={`h-1.5 rounded-full transition-all ${index === activeGoalIndex ? "w-5 bg-violet-500" : "w-1.5 bg-slate-300 hover:bg-slate-400 dark:bg-white/20"}`} />)}
+              </div>
+              <button type="button" onClick={() => changeActiveGoal(1)} aria-label="Show next weekly goal" className="rounded-full border border-slate-200 p-1.5 text-slate-500 transition hover:border-violet-300 hover:text-violet-500 dark:border-white/10 dark:text-slate-300"><FiChevronRight className="h-4 w-4" /></button>
             </div>
           </div>
         </TrendCard>
@@ -473,13 +530,15 @@ function Dashboard() {
 
       <DsaHeatmap entries={entries} onSelectDate={openDateModal} />
 
+      <ContestHeatmap />
+
       {/* Weekly DSA bar chart */}
       <TrendCard
         title="Weekly DSA solved"
         subtitle="Problems solved per week"
         rightSlot={
           <span className="rounded-full bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-600 dark:text-violet-300">
-            goal: {weeklyGoal}/wk
+            goal: {weeklyGoals.dsa}/wk
           </span>
         }
       >

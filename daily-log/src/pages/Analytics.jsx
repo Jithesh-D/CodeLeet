@@ -105,10 +105,10 @@ function Analytics() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatsCard label="Avg score" value={`${summary.avgScore}/10`} detail="All-time" />
-        <StatsCard label="Avg study" value={`${summary.avgStudyHours}h`} detail="Per logged day" accent="emerald" />
-        <StatsCard label="Avg sleep" value={`${summary.avgSleepHours}h`} detail="Per logged day" accent="amber" />
-        <StatsCard label="Avg social scroll" value={`${summary.avgSocialScrollMinutes}m`} detail="Per logged day" accent="rose" />
+        <StatsCard label="Avg score" value={`${summary.avgScore}/10`} detail="All-time" index={0} />
+        <StatsCard label="Avg study" value={`${summary.avgStudyHours}h`} detail="Per logged day" accent="emerald" index={1} />
+        <StatsCard label="Avg sleep" value={`${summary.avgSleepHours}h`} detail="Per logged day" accent="amber" index={2} />
+        <StatsCard label="Avg social scroll" value={`${summary.avgSocialScrollMinutes}m`} detail="Per logged day" accent="rose" index={3} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

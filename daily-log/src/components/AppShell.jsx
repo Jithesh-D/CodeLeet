@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { FiActivity, FiAlertCircle, FiBarChart2, FiHome, FiSettings, FiX } from "react-icons/fi";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import ThemeToggle from "./ThemeToggle";
@@ -57,8 +58,9 @@ function AppShell() {
     <EntriesContext.Provider value={dailyEntries}>
       <div className="relative min-h-screen overflow-hidden">
         <div className="pointer-events-none absolute inset-0 aurora-bg" />
-        <div className="pointer-events-none absolute left-[7%] top-[-9rem] h-80 w-80 rounded-full bg-cyan-400/15 blur-[110px] dark:bg-cyan-400/10" />
-        <div className="pointer-events-none absolute right-[-5rem] top-[16rem] h-96 w-96 rounded-full bg-violet-400/10 blur-[130px] dark:bg-blue-500/10" />
+        <div className="pointer-events-none absolute left-[7%] top-[-9rem] h-80 w-80 rounded-full bg-cyan-400/15 blur-[110px] dark:bg-cyan-400/10 orb-1" />
+        <div className="pointer-events-none absolute right-[-5rem] top-[16rem] h-96 w-96 rounded-full bg-violet-400/10 blur-[130px] dark:bg-blue-500/10 orb-2" />
+        <div className="pointer-events-none absolute bottom-[-8rem] left-[40%] h-72 w-72 rounded-full bg-emerald-400/8 blur-[100px] dark:bg-emerald-500/8 orb-3" />
 
         <div className="relative mx-auto min-h-screen max-w-[1680px] px-3 pb-8 pt-3 sm:px-5 sm:pt-5 lg:px-8">
           <header className="glass-nav sticky top-3 z-30 mx-auto flex max-w-[1600px] items-center justify-between gap-3 rounded-[1.4rem] px-3 py-2.5 sm:px-4">
@@ -133,12 +135,22 @@ function AppShell() {
 
           <main className="mx-auto max-w-[1600px] py-7 sm:py-9 lg:py-11">
             <div className="mb-6 flex items-center gap-3 px-1 sm:hidden">
-              <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.9)]" />
+              <span className="streak-dot h-2 w-2 rounded-full bg-cyan-400" />
               <p className="mono-label text-[10px] font-semibold uppercase text-slate-400">
                 {pageTitle}
               </p>
             </div>
-            <Outlet />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
           </main>
         </div>
       </div>
